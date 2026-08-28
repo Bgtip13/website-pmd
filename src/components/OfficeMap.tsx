@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { Navigation } from "lucide-react";
 import L from "leaflet";
 
+// Fix marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -35,7 +36,7 @@ export default function OfficeMap() {
               Jl. Griya Prima Timur utara No.521, Dedesan, Belang Wetan, Kec. Klaten Utara, Kab. Klaten, Jawa Tengah 57466
             </p>
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${officePosition[0]},${officePosition[1]}`}
+              href="https://www.google.com/maps/dir/?api=1&destination=-7.6852,110.6275"
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: "#047857", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4, marginTop: 8 }}
