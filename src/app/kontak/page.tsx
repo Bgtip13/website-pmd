@@ -1,19 +1,9 @@
 "use client";
 import { useState } from "react";
 import { Phone, Mail, MapPin, Clock, User, Send, Navigation, Building2, Truck } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import dynamic from "next/dynamic";
 
-// Fix marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-const officePosition: [number, number] = [-7.6852, 110.6275];
+const OfficeMap = dynamic(() => import("@/components/OfficeMap"), { ssr: false });
 
 const supervisor = {
   name: "Supervisor Sales",
@@ -23,33 +13,9 @@ const supervisor = {
 };
 
 const sales = [
-  {
-    area: "Solo Raya",
-    name: "Adelia",
-    phone: "082342931570",
-    phoneLink: "6282342931570",
-    schedule: "Senin & Kamis",
-    color: "blue",
-    cities: "Surakarta, Boyolali, Klaten, Sukoharjo, Sragen, Karanganyar, Wonogiri",
-  },
-  {
-    area: "DIY & Sekitarnya",
-    name: "April",
-    phone: "082323352405",
-    phoneLink: "6282323352405",
-    schedule: "Selasa & Jumat",
-    color: "emerald",
-    cities: "Yogyakarta, Bantul, Sleman, Kulon Progo, Gunung Kidul, Kebumen, Purworejo, Magelang",
-  },
-  {
-    area: "Semarang & Sekitarnya",
-    name: "Fitri",
-    phone: "082323209960",
-    phoneLink: "6282323209960",
-    schedule: "Rabu & Sabtu",
-    color: "violet",
-    cities: "Semarang Kota, Semarang Kabupaten, Demak, Kudus, Pati, Grobogan, Salatiga",
-  },
+  { area: "Solo Raya", name: "Adelia", phone: "082342931570", phoneLink: "6282342931570", schedule: "Senin & Kamis", color: "blue", cities: "Surakarta, Boyolali, Klaten, Sukoharjo, Sragen, Karanganyar, Wonogiri" },
+  { area: "DIY & Sekitarnya", name: "April", phone: "082323352405", phoneLink: "6282323352405", schedule: "Selasa & Jumat", color: "emerald", cities: "Yogyakarta, Bantul, Sleman, Kulon Progo, Gunung Kidul, Kebumen, Purworejo, Magelang" },
+  { area: "Semarang & Sekitarnya", name: "Fitri", phone: "082323209960", phoneLink: "6282323209960", schedule: "Rabu & Sabtu", color: "violet", cities: "Semarang Kota, Semarang Kabupaten, Demak, Kudus, Pati, Grobogan, Salatiga" },
 ];
 
 const colorMap: Record<string, { bg: string; text: string; border: string; badge: string }> = {
@@ -57,43 +23,6 @@ const colorMap: Record<string, { bg: string; text: string; border: string; badge
   emerald: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", badge: "bg-emerald-100 text-emerald-700" },
   violet: { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200", badge: "bg-violet-100 text-violet-700" },
 };
-
-// Komponen peta — TIDAK terima props, pakai officePosition langsung
-function OfficeMap() {
-  return (
-    <MapContainer
-      center={officePosition}
-      zoom={14}
-      style={{ height: "100%", width: "100%" }}
-      scrollWheelZoom={false}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker position={officePosition}>
-        <Popup>
-          <div style={{ padding: 4 }}>
-            <h3 style={{ fontWeight: 700, color: "#047857", fontSize: 14, marginBottom: 4 }}>
-              CV Prima Mandiri Distribusi
-            </h3>
-            <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
-              Jl. Griya Prima Timur utara No.521, Dedesan, Belang Wetan, Kec. Klaten Utara, Kab. Klaten, Jawa Tengah 57466
-            </p>
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${officePosition[0]},${officePosition[1]}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#047857", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4, marginTop: 8 }}
-            >
-              <Navigation style={{ width: 12, height: 12 }} /> Buka di Google Maps
-            </a>
-          </div>
-        </Popup>
-      </Marker>
-    </MapContainer>
-  );
-}
 
 export default function KontakPage() {
   const [formData, setFormData] = useState({ name: "", phone: "", message: "" });
@@ -180,7 +109,7 @@ export default function KontakPage() {
                     href={`https://wa.me/${s.phoneLink}?text=Halo%20Kak%20${s.name}%2C%20saya%20ingin%20order`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`mt-4 w-full bg-${s.color}-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2`}
+                    className="mt-4 w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition flex items-center justify-center gap-2"
                   >
                     <Phone className="w-4 h-4" /> Chat {s.name}
                   </a>
@@ -191,12 +120,11 @@ export default function KontakPage() {
         </div>
       </section>
 
-      {/* Info Kantor + Peta */}
+      {/* Lokasi + Peta */}
       <section className="py-12 px-4 bg-white">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">Lokasi Kantor</h2>
           <div className="grid md:grid-cols-2 gap-8 items-stretch">
-            {/* Info */}
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -235,8 +163,6 @@ export default function KontakPage() {
                 </div>
               </div>
             </div>
-
-            {/* Map */}
             <div className="h-[350px] rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
               <OfficeMap />
             </div>
@@ -244,48 +170,24 @@ export default function KontakPage() {
         </div>
       </section>
 
-      {/* Form Hubungi */}
+      {/* Form */}
       <section className="py-12 px-4 bg-gray-50">
         <div className="max-w-xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Kirim Pesan</h2>
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nama</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm"
-                placeholder="Nama Anda"
-              />
+              <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm" placeholder="Nama Anda" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">No. WhatsApp</label>
-              <input
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm"
-                placeholder="08xxxxxxxxxx"
-              />
+              <input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm" placeholder="08xxxxxxxxxx" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Pesan</label>
-              <textarea
-                required
-                rows={4}
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm resize-none"
-                placeholder="Tulis pesan Anda..."
-              />
+              <textarea required rows={4} value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm resize-none" placeholder="Tulis pesan Anda..." />
             </div>
-            <button
-              type="submit"
-              className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition inline-flex items-center justify-center gap-2"
-            >
+            <button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition inline-flex items-center justify-center gap-2">
               <Send className="w-4 h-4" /> Kirim via WhatsApp
             </button>
           </form>
