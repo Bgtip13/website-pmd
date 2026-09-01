@@ -4,14 +4,14 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface Props {
-  expandedArea: number | null;
+  expandedArea?: number | null;
 }
 
 const COLORS = ["#3b82f6", "#10b981", "#8b5cf6"];
 const AREA_KEYS = ["solo", "diy", "semarang"];
 const AREA_NAMES = ["Solo Raya", "DIY & Sekitarnya", "Semarang & Sekitarnya"];
 
-export default function AreaMap({ expandedArea }: Props) {
+export default function AreaMap({ expandedArea = null }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const layersRef = useRef<L.GeoJSON[]>([]);
