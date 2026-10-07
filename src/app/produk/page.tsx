@@ -107,66 +107,200 @@ function BrandAvatar({ brand }: { brand: string }) {
   );
 }
 
-/* ─── PDF Generator ─── */
-function generatePDF(products: Product[]) {
-  const grouped: Record<string, Product[]> = {};
-  products.forEach((p) => {
-    if (!grouped[p.cat]) grouped[p.cat] = [];
-    grouped[p.cat].push(p);
-  });
+/* ─── PDF Helpers ─── */
+const CATEGORY_ORDER = [
+  "Dry Food",
+  "Wet Food",
+  "Snack",
+  "Accessories",
+  "Litter",
+  "Other",
+];
 
-  let html = `
-    <html><head><meta charset="utf-8">
-    <style>
-      body { font-family: Arial, sans-serif; margin: 20px; color: #111; }
-      h1 { color: #059669; text-align: center; margin-bottom: 5px; }
-      h2 { color: #059669; border-bottom: 2px solid #059669; padding-bottom: 4px; margin-top: 30px; }
-      .info { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-      th { background: #059669; color: white; padding: 8px 6px; text-align: left; }
-      td { padding: 7px 6px; border-bottom: 1px solid #e5e7eb; }
-      tr:nth-child(even) { background: #f9fafb; }
-      .price { font-weight: bold; color: #059669; }
-      .contact { text-align: center; margin-top: 30px; padding: 15px; background: #f0fdf4; border-radius: 8px; font-size: 11px; }
-    </style></head><body>
-    <h1>CV Prima Mandiri Distribusi</h1>
-    <div class="info">Supplier Pakan Hewan Kesayangan Lengkap & Cepat<br>Jl. Griya Prima Timur utara No.521, Klaten, Jawa Tengah<br>Email: primamandiridistribusi01@gmail.com</div>
-  `;
-
-  const catOrder = ["Dry Food", "Wet Food", "Snack", "Accessories", "Litter", "Other"];
-  const allCats = Object.keys(grouped);
-  const sortedCats = [
-    ...catOrder.filter((c) => allCats.includes(c)),
-    ...allCats.filter((c) => !catOrder.includes(c)).sort(),
+function sortCategories(cats: string[]): string[] {
+  return [
+    ...CATEGORY_ORDER.filter((c) => cats.includes(c)),
+    ...cats.filter((c) => !CATEGORY_ORDER.includes(c)).sort(),
   ];
+}
 
-  sortedCats.forEach((cat) => {
+/* Rupiah tanpa karakter khusus — aman untuk font helvetica di PDF */
+function formatRupiahPlain(price: number): string {
+  return "Rp " + price.toLocaleString("id-ID");
+}
+
+/* ─── PDF Generator (PDF asli, bukan HTML) ─── */
+async function generatePDF(products: Product[]) {
+  if (products.length === 0) {
+    alert("Tidak ada produk untuk diekspor.");
+    return;
+  }
+
+  // Library dimuat saat tombol diklik → aman untuk SSR / prerender
+  const [{ jsPDF }, { autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = 10;
+  const bottomSafe = 28;
+
+  /* ── Grouping per kategori ── */
+  const grouped: Record<string, Product[]> = {};
+  for (const p of products) {
+    const cat = (p.cat || "").trim() || "Lainnya";
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(p);
+  }
+  const categories = sortCategories(Object.keys(grouped));
+
+  /* ── Kop surat ── */
+  try {
+    const logo = new Image();
+    logo.src = "/logo.png";
+    await logo.decode();
+    if (logo.width > 0) {
+      doc.addImage(logo, "PNG", marginX, 8, 18, 18);
+    }
+  } catch {
+    /* logo gagal dimuat → PDF tetap dibuat */
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(5, 120, 85);
+  doc.text("CV Prima Mandiri Distribusi", marginX + 22, 14);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Supplier Pakan Hewan Kesayangan Lengkap & Cepat", marginX + 22, 19.5);
+  doc.text(
+    "Jl. Griya Prima Timur Utara No.521, Klaten, Jawa Tengah 57466",
+    marginX + 22,
+    24
+  );
+  doc.text("Email: primamandiridistribusi01@gmail.com", marginX + 22, 28.5);
+
+  doc.setDrawColor(5, 150, 105);
+  doc.setLineWidth(0.5);
+  doc.line(marginX, 33, pageWidth - marginX, 33);
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  doc.text(
+    "Daftar Harga Normal - Untuk harga grosir silakan hubungi admin kami",
+    marginX,
+    39
+  );
+
+  let cursorY = 46;
+
+  /* ── Tabel per kategori ── */
+  categories.forEach((cat) => {
     const items = grouped[cat];
-    html += `<h2>${cat} (${items.length} produk)</h2>`;
-    html += `<table><tr><th>No</th><th>Brand</th><th>Nama Produk</th><th>Varian</th><th>Harga</th><th>Keterangan</th></tr>`;
-    items.forEach((p, i) => {
-      const priceStr = p.price > 0 ? formatRupiah(p.price) : "Hubungi Admin";
-      html += `<tr><td>${i + 1}</td><td>${p.brand}</td><td>${p.name}</td><td>${p.variant}</td><td class="price">${priceStr}</td><td>${p.keterangan}</td></tr>`;
+
+    // Halaman baru kalau sisa ruang tidak cukup untuk judul + beberapa baris
+    if (cursorY > pageHeight - bottomSafe - 20) {
+      doc.addPage();
+      cursorY = 18;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(5, 120, 85);
+    doc.text(`${cat} (${items.length} produk)`, marginX, cursorY);
+
+    autoTable(doc, {
+      startY: cursorY + 2.5,
+      head: [["No", "Brand", "Nama Produk", "Varian", "Harga", "Keterangan"]],
+      body: items.map((p, i) => [
+        String(i + 1),
+        p.brand || "-",
+        p.name || "-",
+        p.variant || "-",
+        p.price > 0 ? formatRupiahPlain(p.price) : "Hubungi Admin",
+        p.keterangan || "-",
+      ]),
+      theme: "grid",
+      margin: { top: 18, right: marginX, bottom: bottomSafe, left: marginX },
+      styles: {
+        font: "helvetica",
+        fontSize: 7.5,
+        cellPadding: 1.6,
+        overflow: "linebreak",
+        valign: "middle",
+        textColor: [40, 40, 40],
+        lineColor: [225, 232, 229],
+        lineWidth: 0.15,
+      },
+      headStyles: {
+        fillColor: [5, 150, 105],
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 7.5,
+        halign: "left",
+      },
+      alternateRowStyles: { fillColor: [246, 251, 249] },
+      columnStyles: {
+        0: { cellWidth: 8, halign: "center" },
+        1: { cellWidth: 26 },
+        2: { cellWidth: 50 },
+        3: { cellWidth: 30 },
+        4: {
+          cellWidth: 26,
+          halign: "right",
+          fontStyle: "bold",
+          textColor: [5, 120, 85],
+        },
+        5: { cellWidth: 40 },
+      },
     });
-    html += `</table>`;
+
+    const lastTable = (
+      doc as unknown as { lastAutoTable?: { finalY?: number } }
+    ).lastAutoTable;
+    cursorY = (lastTable?.finalY ?? cursorY) + 9;
   });
 
-  html += `
-    <div class="contact">
-      <strong>Untuk harga grosir, silakan hubungi admin:</strong><br>
-      Supervisor Sales: 08212256908<br>
-      Solo: Adelia (082342931570) | DIY: April (082323352405) | Semarang: Fitri (082323209960)
-    </div>
-    </body></html>
-  `;
+  /* ── Footer + nomor halaman di semua halaman ── */
+  const totalPages = doc.getNumberOfPages();
 
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Price-List-Prima-Mandiri-Distribusi.html";
-  a.click();
-  URL.revokeObjectURL(url);
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
+
+    doc.setDrawColor(220, 227, 224);
+    doc.setLineWidth(0.2);
+    doc.line(marginX, pageHeight - 20, pageWidth - marginX, pageHeight - 20);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(5, 120, 85);
+    doc.text("Untuk harga grosir, silakan hubungi admin kami:", marginX, pageHeight - 15.5);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(110, 110, 110);
+    doc.text(
+      "Supervisor Sales 08212256908 | Solo: Adelia 082342931570 | DIY: April 082323352405 | Semarang: Fitri 082323209960",
+      marginX,
+      pageHeight - 11.5
+    );
+
+    doc.text("CV Prima Mandiri Distribusi", marginX, pageHeight - 6.5);
+    doc.text(
+      `Halaman ${page} dari ${totalPages}`,
+      pageWidth - marginX,
+      pageHeight - 6.5,
+      { align: "right" }
+    );
+  }
+
+  /* ── Unduh ── */
+  const today = new Date().toISOString().slice(0, 10);
+  doc.save(`Price-List-PMD-${today}.pdf`);
 }
 
 /* ─── Main Page ─── */
@@ -177,6 +311,7 @@ export default function ProdukPage() {
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [selectedBrand, setSelectedBrand] = useState("Semua");
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchProducts().then((data) => {
@@ -237,14 +372,22 @@ export default function ProdukPage() {
       if (!grouped[p.cat]) grouped[p.cat] = [];
       grouped[p.cat].push(p);
     });
-    const catOrder = ["Dry Food", "Wet Food", "Snack", "Accessories", "Litter", "Other"];
     const allCats = Object.keys(grouped);
-    const sorted = [
-      ...catOrder.filter((c) => allCats.includes(c)),
-      ...allCats.filter((c) => !catOrder.includes(c)).sort(),
-    ];
+    const sorted = sortCategories(allCats);
     return sorted.map((cat) => ({ cat, items: grouped[cat] }));
   }, [filteredProducts]);
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      await generatePDF(filteredProducts);
+    } catch (err) {
+      console.error("Gagal membuat PDF:", err);
+      alert("Gagal membuat PDF. Coba lagi atau hubungi developer.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   /* ─── Loading State ─── */
   if (loading) {
@@ -284,83 +427,85 @@ export default function ProdukPage() {
       {/* ─── Main Content — Side by Side ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-         {/* ─── KIRI — Slideshow (Sticky) ─── */}
-<div className="lg:w-[40%] lg:sticky lg:top-24 lg:self-start">
-  <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-white border border-gray-100">
-    {/* Container dengan tinggi fleksibel */}
-    <div className="relative w-full">
-      {slides.map((slide, i) => (
-        <div
-          key={i}
-          className={`transition-opacity duration-1000 ${
-            i === currentSlide ? "opacity-100 relative" : "opacity-0 absolute inset-0"
-          }`}
-        >
-          <img
-            src={slide.src}
-            alt={slide.alt}
-            className="w-full h-auto object-contain"
-            loading={i === 0 ? "eager" : "lazy"}
-          />
-        </div>
-      ))}
-    </div>
+          {/* ─── KIRI — Slideshow (Sticky) ─── */}
+          <div className="lg:w-[40%] lg:sticky lg:top-24 lg:self-start">
+            <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-white border border-gray-100">
+              <div className="relative w-full">
+                {slides.map((slide, i) => (
+                  <div
+                    key={i}
+                    className={`transition-opacity duration-1000 ${
+                      i === currentSlide
+                        ? "opacity-100 relative"
+                        : "opacity-0 absolute inset-0"
+                    }`}
+                  >
+                    <img
+                      src={slide.src}
+                      alt={slide.alt}
+                      className="w-full h-auto object-contain"
+                      loading={i === 0 ? "eager" : "lazy"}
+                    />
+                  </div>
+                ))}
+              </div>
 
-    {/* Dot indicator */}
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5">
-      {slides.map((_, i) => (
-        <button
-          key={i}
-          onClick={() => setCurrentSlide(i)}
-          className={`w-2 h-2 rounded-full transition-all ${
-            i === currentSlide ? "bg-white w-4" : "bg-white/50"
-          }`}
-        />
-      ))}
-    </div>
+              {/* Dot indicator */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentSlide(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      i === currentSlide ? "bg-white w-4" : "bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
 
-    {/* Prev / Next */}
-    <button
-      onClick={() =>
-        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
-      }
-      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center transition"
-    >
-      <ChevronLeft size={20} />
-    </button>
-    <button
-      onClick={() =>
-        setCurrentSlide((prev) => (prev + 1) % slides.length)
-      }
-      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center transition"
-    >
-      <ChevronRight size={20} />
-    </button>
-  </div>
+              {/* Prev / Next */}
+              <button
+                onClick={() =>
+                  setCurrentSlide(
+                    (prev) => (prev - 1 + slides.length) % slides.length
+                  )
+                }
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center transition"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentSlide((prev) => (prev + 1) % slides.length)
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center transition"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
 
-  {/* Info Card */}
-  <div className="mt-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-    <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-      <Package size={18} className="text-emerald-600" />
-      Informasi Produk
-    </h3>
-    <ul className="space-y-2 text-sm text-gray-600">
-      <li className="flex items-start gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-        Harga yang tercantum adalah harga normal
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-        Untuk harga grosir, silakan chat admin langsung
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-        Stok dan harga dapat berubah sewaktu-waktu
-      </li>
-    </ul>
-  </div>
-</div>
-
+            {/* Info Card */}
+            <div className="mt-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <Package size={18} className="text-emerald-600" />
+                Informasi Produk
+              </h3>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                  Harga yang tercantum adalah harga normal
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                  Untuk harga grosir, silakan chat admin langsung
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                  Stok dan harga dapat berubah sewaktu-waktu
+                </li>
+              </ul>
+            </div>
+          </div>
 
           {/* ─── KANAN — Filter + Product List ─── */}
           <div className="lg:w-[60%]">
@@ -402,10 +547,12 @@ export default function ProdukPage() {
               </select>
 
               <button
-                onClick={() => generatePDF(filteredProducts)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center gap-2 whitespace-nowrap"
+                onClick={handleExport}
+                disabled={isExporting}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Download size={16} /> Unduh PDF
+                <Download size={16} />
+                {isExporting ? "Menyiapkan..." : "Unduh PDF"}
               </button>
             </div>
 
@@ -444,14 +591,10 @@ export default function ProdukPage() {
                           <tr className="bg-emerald-50 text-emerald-800">
                             <th className="py-3 px-4 text-left w-10">No</th>
                             <th className="py-3 px-4 text-left">Brand</th>
-                            <th className="py-3 px-4 text-left">
-                              Nama Produk
-                            </th>
+                            <th className="py-3 px-4 text-left">Nama Produk</th>
                             <th className="py-3 px-4 text-left">Varian</th>
                             <th className="py-3 px-4 text-right">Harga</th>
-                            <th className="py-3 px-4 text-left">
-                              Keterangan
-                            </th>
+                            <th className="py-3 px-4 text-left">Keterangan</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -466,9 +609,7 @@ export default function ProdukPage() {
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2">
                                   <BrandAvatar brand={p.brand} />
-                                  <span className="font-medium">
-                                    {p.brand}
-                                  </span>
+                                  <span className="font-medium">{p.brand}</span>
                                 </div>
                               </td>
                               <td className="py-3 px-4">{p.name}</td>
