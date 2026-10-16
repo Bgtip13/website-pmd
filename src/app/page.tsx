@@ -11,23 +11,12 @@ import {
   Calendar,
   ChevronRight,
 } from "lucide-react";
-import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const AreaMap = dynamic(() => import("@/components/AreaMap"), { ssr: false });
 
-/* ─── Hero Slideshow ─── */
-const heroSlides = [
-  { src: "/hero1.jpg", alt: "Pakan Kucing Premium" },
-  { src: "/hero2.jpg", alt: "Produk Lengkap" },
-  { src: "/hero3.jpg", alt: "Pengiriman Cepat" },
-  { src: "/hero4.jpg", alt: "Distributor Terpercaya" },
-  { src: "/hero5.jpg", alt: "Stok Selalu Ready" },
-  { src: "/hero6.jpg", alt: "Pengiriman ke Solo" },
-  { src: "/hero7.jpg", alt: "Pengiriman ke DIY" },
-  { src: "/hero8.jpg", alt: "Pengiriman ke Semarang" },
-  { src: "/hero9.jpg", alt: "CV Prima Mandiri Distribusi" },
-];
+/* ─── Hero ─── */
+const HERO_IMAGE = "/cat-pattern.png";
 
 /* ─── Features ─── */
 const features = [
@@ -73,33 +62,17 @@ const colorMap: Record<string, { bg: string; text: string; border: string; badge
 };
 
 export default function HomePage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <>
-      {/* ═══ HERO SLIDESHOW ═══ */}
-      <section className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden bg-gray-900">
-        {heroSlides.map((slide, i) => (
-          <div
-            key={i}
-            className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? "opacity-100" : "opacity-0"}`}
-          >
-            <img
-              src={slide.src}
-              alt={slide.alt}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ))}
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      {/* ═══ HERO ═══ */}
+      <section className="relative w-full h-[360px] sm:h-[460px] lg:h-[560px] overflow-hidden bg-emerald-900">
+        <img
+          src={HERO_IMAGE}
+          alt="Pola kucing - CV Prima Mandiri Distribusi"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Overlay gradient agar teks tetap terbaca */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/30" />
         {/* Teks di atas */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-4 drop-shadow-lg">
@@ -116,16 +89,6 @@ export default function HomePage() {
               <Phone className="w-5 h-5" /> Hubungi Admin
             </Link>
           </div>
-        </div>
-        {/* Dot indicator */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-          {heroSlides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentSlide(i)}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${i === currentSlide ? "bg-white w-6" : "bg-white/50"}`}
-            />
-          ))}
         </div>
       </section>
 
