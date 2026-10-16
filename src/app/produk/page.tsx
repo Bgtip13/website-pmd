@@ -22,8 +22,8 @@ const slides = [
   { src: "/product-hero-15.png", alt: "Produk 15" },
   { src: "/product-hero-16.png", alt: "Produk 16" },
   { src: "/product-hero-17.png", alt: "Produk 17" },
-  { src: "/product-hero-18.png", alt: "Produk 18" } 
-  { src: "/product-hero-19.png", alt: "Produk 19" }
+  { src: "/product-hero-18.png", alt: "Produk 18" }, 
+  { src: "/product-hero-19.png", alt: "Produk 19" },
 ];
 
 /* ─── Brand Logo Map ─── */
