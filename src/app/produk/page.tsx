@@ -14,6 +14,16 @@ const slides = [
   { src: "/product-hero-7.png", alt: "Produk 7" },
   { src: "/product-hero-8.png", alt: "Produk 8" },
   { src: "/product-hero-9.png", alt: "Produk 9" },
+  { src: "/product-hero-1.png", alt: "Produk 10" },
+  { src: "/product-hero-2.png", alt: "Produk 11" },
+  { src: "/product-hero-3.png", alt: "Produk 12" },
+  { src: "/product-hero-4.png", alt: "Produk 13" },
+  { src: "/product-hero-5.png", alt: "Produk 14" },
+  { src: "/product-hero-6.png", alt: "Produk 15" },
+  { src: "/product-hero-7.png", alt: "Produk 16" },
+  { src: "/product-hero-8.png", alt: "Produk 17" },
+  { src: "/product-hero-9.png", alt: "Produk 18" } 
+  { src: "/product-hero-9.png", alt: "Produk 19" }
 ];
 
 /* ─── Brand Logo Map ─── */
