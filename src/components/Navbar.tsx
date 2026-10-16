@@ -33,8 +33,8 @@ export default function Navbar() {
             </div>
           )}
           <div className="flex flex-col min-w-0">
-            <span className="font-bold text-emerald-800 text-sm leading-tight whitespace-nowrap">Prima Mandiri Distribusi</span>
-            <span className="text-[10px] text-gray-400 leading-tight whitespace-nowrap uppercase tracking-wider">Supplier Pakan Hewan</span>
+            <span className="font-bold text-emerald-800 text-sm leading-tight whitespace-nowrap">CV Prima Mandiri Distribusi</span>
+            <span className="text-[10px] text-gray-400 leading-tight whitespace-nowrap uppercase tracking-wider">Supplier Pakan Hewan Terlengkap & Tercepat</span>
           </div>
         </Link>
 
