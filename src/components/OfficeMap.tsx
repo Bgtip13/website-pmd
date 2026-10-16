@@ -11,7 +11,7 @@ export default function OfficeMap() {
     if (!mapRef.current || mapInstance.current) return;
 
     const map = L.map(mapRef.current, {
-      center: [-7.7309, 110.6068],
+      center: [-7.6805872, 110.6246145],
       zoom: 15,
       zoomControl: true,
       attributionControl: true,
@@ -22,7 +22,7 @@ export default function OfficeMap() {
       maxZoom: 19,
     }).addTo(map);
 
-    L.marker([-7.7309, 110.6068])
+    L.marker([-7.6805872, 110.6246145])
       .addTo(map)
       .bindPopup("<strong>CV Prima Mandiri Distribusi</strong><br/>Jl. Griya Prima Timur utara No.521<br/>Klaten, Jawa Tengah 57466")
       .openPopup();
