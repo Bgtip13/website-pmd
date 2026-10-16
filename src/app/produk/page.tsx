@@ -63,8 +63,8 @@ const brandLogos: Record<string, string> = {
   "Junior": "/logos/junior.png",
   "Kitchen Flavour": "/logos/kitchen-flavour.png",
   "Lezato": "/logos/lezato.png",
-  "Lightning": "/logos/lightning.png"
-  "Malco": "/logos/malco.png"
+  "Lightning": "/logos/lightning.png",
+  "Malco": "/logos/malco.png",
   "Luna": "/logos/luna.png",
   "Markotop": "/logos/markotop.png",
   "Maxi": "/logos/maxi.png",
