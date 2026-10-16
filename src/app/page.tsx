@@ -35,24 +35,24 @@ const schedule = [
 
 /* ─── Brands ─── */
 const brands = [
-  { name: "Royal Canin", file: "royal-canin.png" },
+  { name: "Animal & co", file: "animal-co.png" },
   { name: "Whiskas", file: "whiskas.png" },
-  { name: "Pro Plan", file: "proplan.png" },
+  { name: "Markotops", file: "markotops.png" },
   { name: "Me-O", file: "meo.png" },
-  { name: "Monge", file: "monge.png" },
-  { name: "Sanabelle", file: "sanabelle.png" },
-  { name: "Leonardo", file: "leonardo.png" },
-  { name: "Equilibrio", file: "equilibrio.png" },
-  { name: "Cleo", file: "cleo.png" },
+  { name: "Furlove", file: "furlove.png" },
+  { name: "Maxi", file: "maxi.png" },
+  { name: "Crystal Kitty", file: "crystal-kitty.png" },
+  { name: "Supercat", file: "supercat.png" },
+  { name: "Luna", file: "luna.png" },
   { name: "Bolt", file: "bolt.png" },
   { name: "Excel", file: "excel.png" },
-  { name: "Propet", file: "propet.png" },
+  { name: "BIO", file: "bio.png" },
   { name: "Kitchen Flavour", file: "kitchen-flavour.png" },
   { name: "Cat Choize", file: "cat-choize.png" },
   { name: "Amigo", file: "amigo.png" },
   { name: "Felibite", file: "felibite.png" },
   { name: "Cattie Care", file: "cattie-care.png" },
-  { name: "Furlove", file: "furlove.png" },
+  { name: "Taro", file: "taro.png" },
 ];
 
 const colorMap: Record<string, { bg: string; text: string; border: string; badge: string; accent: string }> = {
