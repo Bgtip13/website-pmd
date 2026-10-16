@@ -37,7 +37,7 @@ const schedule = [
 const brands = [
   { name: "Animal & co", file: "animal-co.png" },
   { name: "Whiskas", file: "whiskas.png" },
-  { name: "Markotops", file: "markotops.png" },
+  { name: "Markotops", file: "markotop.png" },
   { name: "Me-O", file: "meo.png" },
   { name: "Furlove", file: "furlove.png" },
   { name: "Maxi", file: "maxi.png" },
