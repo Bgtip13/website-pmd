@@ -105,7 +105,7 @@ const brandLogos: Record<string, string> = {
   "Pussbite": "/logos/pussbite.png",
   "Pro Plan": "/logos/proplan.png",
   "Royal Canin": "/logos/royal-canin.png",
-  "Takari": "/logos/takari.png",
+  "Takari": "/logos/Takari.png",
   "Taro": "/logos/taro.png",
   "Toppet": "/logos/toppet.png",
   "Santap": "/logos/santap.png",
