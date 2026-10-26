@@ -152,7 +152,7 @@ function BrandAvatar({ brand }: { brand: string }) {
     const idx = brand.charCodeAt(0) % colors.length;
     return (
       <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${colors[idx]}`}
+        className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${colors[idx]}`}
       >
         {initials}
       </div>
@@ -163,7 +163,7 @@ function BrandAvatar({ brand }: { brand: string }) {
     <img
       src={logo}
       alt={brand}
-      className="w-8 h-8 rounded-lg object-contain shrink-0"
+      className="w-7 h-7 rounded-md object-contain shrink-0"
       onError={() => setError(true)}
     />
   );
@@ -762,12 +762,12 @@ export default function ProdukPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[660px] table-fixed text-sm">
                         <colgroup>
-                          <col className="w-[8%]" />
-                          <col className="w-[21%]" />
-                          <col className="w-[27%]" />
+                          <col className="w-[6%]" />
+                          <col className="w-[26%]" />
+                          <col className="w-[24%]" />
                           <col className="w-[14%]" />
-                          <col className="w-[17%]" />
-                          <col className="w-[13%]" />
+                          <col className="w-[16%]" />
+                          <col className="w-[14%]" />
                         </colgroup>
                         <thead>
                           <tr className="bg-emerald-50 text-emerald-800">
@@ -803,10 +803,7 @@ export default function ProdukPage() {
                               <td className="py-2.5 px-3 sm:px-4">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <BrandAvatar brand={p.brand} />
-                                  <span
-                                    className="truncate font-medium text-gray-800"
-                                    title={p.brand}
-                                  >
+                                  <span className="break-words font-medium text-gray-800">
                                     {p.brand}
                                   </span>
                                 </div>
@@ -819,7 +816,9 @@ export default function ProdukPage() {
                               </td>
                               <td
                                 className={`py-2.5 px-3 sm:px-4 text-right font-semibold text-emerald-700 ${
-                                  p.price > 0 ? "whitespace-nowrap tabular-nums" : ""
+                                  p.price > 0
+                                    ? "whitespace-nowrap tabular-nums text-[13px]"
+                                    : ""
                                 }`}
                               >
                                 {p.price > 0 ? (
@@ -830,13 +829,8 @@ export default function ProdukPage() {
                                   </span>
                                 )}
                               </td>
-                              <td className="py-2.5 px-3 sm:px-4 text-xs text-gray-500">
-                                <span
-                                  className="block truncate"
-                                  title={p.keterangan}
-                                >
-                                  {p.keterangan || "-"}
-                                </span>
+                              <td className="py-2.5 px-3 sm:px-4 text-xs text-gray-500 break-words">
+                                {p.keterangan || "-"}
                               </td>
                             </tr>
                           ))}
