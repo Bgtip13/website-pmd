@@ -1,29 +1,29 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Package, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchProducts, formatRupiah, Product } from "@/lib/fetchProducts";
 
 /* ─── Slideshow Data ─── */
 const slides = [
-  { src: "/product-hero-1.png", alt: "Produk 1" },
-  { src: "/product-hero-2.png", alt: "Produk 2" },
-  { src: "/product-hero-3.png", alt: "Produk 3" },
-  { src: "/product-hero-4.png", alt: "Produk 4" },
-  { src: "/product-hero-5.png", alt: "Produk 5" },
-  { src: "/product-hero-6.png", alt: "Produk 6" },
-  { src: "/product-hero-7.png", alt: "Produk 7" },
-  { src: "/product-hero-8.png", alt: "Produk 8" },
-  { src: "/product-hero-9.png", alt: "Produk 9" },
-  { src: "/product-hero-10.png", alt: "Produk 10" },
-  { src: "/product-hero-11.png", alt: "Produk 11" },
-  { src: "/product-hero-12.png", alt: "Produk 12" },
-  { src: "/product-hero-13.png", alt: "Produk 13" },
-  { src: "/product-hero-14.png", alt: "Produk 14" },
-  { src: "/product-hero-15.png", alt: "Produk 15" },
-  { src: "/product-hero-16.png", alt: "Produk 16" },
-  { src: "/product-hero-17.png", alt: "Produk 17" },
-  { src: "/product-hero-18.png", alt: "Produk 18" }, 
-  { src: "/product-hero-19.png", alt: "Produk 19" },
+  { src: "/product-hero-1.png", thumb: "/gallery-thumbs/hero-1.webp", alt: "Foto produk 1" },
+  { src: "/product-hero-2.png", thumb: "/gallery-thumbs/hero-2.webp", alt: "Foto produk 2" },
+  { src: "/product-hero-3.png", thumb: "/gallery-thumbs/hero-3.webp", alt: "Foto produk 3" },
+  { src: "/product-hero-4.png", thumb: "/gallery-thumbs/hero-4.webp", alt: "Foto produk 4" },
+  { src: "/product-hero-5.png", thumb: "/gallery-thumbs/hero-5.webp", alt: "Foto produk 5" },
+  { src: "/product-hero-6.png", thumb: "/gallery-thumbs/hero-6.webp", alt: "Foto produk 6" },
+  { src: "/product-hero-7.png", thumb: "/gallery-thumbs/hero-7.webp", alt: "Foto produk 7" },
+  { src: "/product-hero-8.png", thumb: "/gallery-thumbs/hero-8.webp", alt: "Foto produk 8" },
+  { src: "/product-hero-9.png", thumb: "/gallery-thumbs/hero-9.webp", alt: "Foto produk 9" },
+  { src: "/product-hero-10.png", thumb: "/gallery-thumbs/hero-10.webp", alt: "Foto produk 10" },
+  { src: "/product-hero-11.png", thumb: "/gallery-thumbs/hero-11.webp", alt: "Foto produk 11" },
+  { src: "/product-hero-12.png", thumb: "/gallery-thumbs/hero-12.webp", alt: "Foto produk 12" },
+  { src: "/product-hero-13.png", thumb: "/gallery-thumbs/hero-13.webp", alt: "Foto produk 13" },
+  { src: "/product-hero-14.png", thumb: "/gallery-thumbs/hero-14.webp", alt: "Foto produk 14" },
+  { src: "/product-hero-15.png", thumb: "/gallery-thumbs/hero-15.webp", alt: "Foto produk 15" },
+  { src: "/product-hero-16.png", thumb: "/gallery-thumbs/hero-16.webp", alt: "Foto produk 16" },
+  { src: "/product-hero-17.png", thumb: "/gallery-thumbs/hero-17.webp", alt: "Foto produk 17" },
+  { src: "/product-hero-18.png", thumb: "/gallery-thumbs/hero-18.webp", alt: "Foto produk 18" },
+  { src: "/product-hero-19.png", thumb: "/gallery-thumbs/hero-19.webp", alt: "Foto produk 19" },
 ];
 
 /* ─── Brand Logo Map ─── */
@@ -169,21 +169,63 @@ function BrandAvatar({ brand }: { brand: string }) {
   );
 }
 
-/* ─── PDF Helpers ─── */
+/* ─── Urutan kategori sesuai permintaan ─── */
 const CATEGORY_ORDER = [
-  "Dry Food",
-  "Wet Food",
-  "Snack",
-  "Accessories",
-  "Litter",
-  "Other",
+  "DRYFOOD",
+  "DRYFOOD FRESHPACK",
+  "WETFOOD CAN",
+  "WETFOOD POUCH",
+  "SNACK",
+  "PASIR",
+  "TOFU/WOODPELET",
+  "ROYAL CANIN",
+  "SUSU",
+  "OBAT",
+  "AKSESORIS",
+  "KANDANG",
+  "SHAMPO",
 ];
 
+/* Alias → kategori baku, karena penulisan di spreadsheet bisa bervariasi */
+const CATEGORY_ALIASES: Record<string, string> = {
+  "dry food": "DRYFOOD",
+  dryfood: "DRYFOOD",
+  "dry food freshpack": "DRYFOOD FRESHPACK",
+  "dry food fresh pack": "DRYFOOD FRESHPACK",
+  "dryfood freshpack": "DRYFOOD FRESHPACK",
+  "dryfood fresh pack": "DRYFOOD FRESHPACK",
+  "wet food can": "WETFOOD CAN",
+  "wetfood can": "WETFOOD CAN",
+  "wet food pouch": "WETFOOD POUCH",
+  "wetfood pouch": "WETFOOD POUCH",
+  snack: "SNACK",
+  pasir: "PASIR",
+  litter: "PASIR",
+  "tofu/woodpelet": "TOFU/WOODPELET",
+  "tofu/wood pellet": "TOFU/WOODPELET",
+  "tofu / woodpelet": "TOFU/WOODPELET",
+  "royal canin": "ROYAL CANIN",
+  susu: "SUSU",
+  obat: "OBAT",
+  aksesoris: "AKSESORIS",
+  accessories: "AKSESORIS",
+  kandang: "KANDANG",
+  shampo: "SHAMPO",
+};
+
+function categoryRank(cat: string): number {
+  const key = cat.toLowerCase().trim();
+  const normalized = CATEGORY_ALIASES[key] ?? key.toUpperCase();
+  const index = CATEGORY_ORDER.indexOf(normalized);
+  return index === -1 ? CATEGORY_ORDER.length : index;
+}
+
+/* Kategori yang tidak terdaftar diletakkan di akhir, urut alfabetis */
 function sortCategories(cats: string[]): string[] {
-  return [
-    ...CATEGORY_ORDER.filter((c) => cats.includes(c)),
-    ...cats.filter((c) => !CATEGORY_ORDER.includes(c)).sort(),
-  ];
+  return [...cats].sort((a, b) => {
+    const diff = categoryRank(a) - categoryRank(b);
+    return diff !== 0 ? diff : a.localeCompare(b, "id");
+  });
 }
 
 /* Rupiah tanpa karakter khusus — aman untuk font helvetica di PDF */
@@ -374,6 +416,15 @@ export default function ProdukPage() {
   const [selectedBrand, setSelectedBrand] = useState("Semua");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const thumbsRef = useRef<HTMLDivElement>(null);
+  const activeThumbRef = useRef<HTMLButtonElement>(null);
+
+  const activeSlide = slides[currentSlide];
+  const activeFileType = activeSlide.src.split(".").pop() ?? "png";
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide((index + slides.length) % slides.length);
+  };
 
   useEffect(() => {
     fetchProducts().then((data) => {
@@ -382,16 +433,46 @@ export default function ProdukPage() {
     });
   }, []);
 
+  /* Navigasi keyboard ← → (tanpa mengganggu input filter) */
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 4000);
-    return () => clearInterval(timer);
+    const handleKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (event.key === "ArrowLeft") {
+        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+      } else if (event.key === "ArrowRight") {
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, []);
+
+  /* Preload foto berikutnya agar navigasi terasa ringan */
+  useEffect(() => {
+    const next = slides[(currentSlide + 1) % slides.length];
+    const img = new Image();
+    img.src = next.src;
+  }, [currentSlide]);
+
+  /* Thumbnail aktif selalu terlihat di strip navigasi */
+  useEffect(() => {
+    const container = thumbsRef.current;
+    const thumb = activeThumbRef.current;
+    if (!container || !thumb) return;
+    container.scrollTo({
+      left:
+        thumb.offsetLeft -
+        container.clientWidth / 2 +
+        thumb.clientWidth / 2,
+      behavior: "smooth",
+    });
+  }, [currentSlide]);
 
   const categories = useMemo(() => {
     const cats = products.map((p) => p.cat).filter((c) => c !== "");
-    return ["Semua", ...[...new Set(cats)].sort()];
+    return ["Semua", ...sortCategories([...new Set(cats)])];
   }, [products]);
 
   const brands = useMemo(() => {
@@ -489,61 +570,92 @@ export default function ProdukPage() {
       {/* ─── Main Content — Side by Side ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* ─── KIRI — Slideshow (Sticky) ─── */}
-          <div className="lg:w-[40%] lg:sticky lg:top-24 lg:self-start">
+          {/* ─── KIRI — Galeri foto produk (manual, bisa diunduh) ─── */}
+          <div className="lg:w-[42%] lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
             <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-white border border-gray-100">
-              <div className="relative w-full">
-                {slides.map((slide, i) => (
-                  <div
-                    key={i}
-                    className={`transition-opacity duration-1000 ${
-                      i === currentSlide
-                        ? "opacity-100 relative"
-                        : "opacity-0 absolute inset-0"
-                    }`}
-                  >
-                    <img
-                      src={slide.src}
-                      alt={slide.alt}
-                      className="w-full h-auto object-contain"
-                      loading={i === 0 ? "eager" : "lazy"}
-                    />
-                  </div>
-                ))}
+              {/* Header galeri + tombol unduh */}
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-gray-800">Galeri Produk</p>
+                  <p className="text-xs text-gray-500" aria-live="polite">
+                    Foto {currentSlide + 1} dari {slides.length}
+                  </p>
+                </div>
+                <a
+                  href={activeSlide.src}
+                  download={`Produk-PMD-${currentSlide + 1}.${activeFileType}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-medium text-white transition shrink-0"
+                >
+                  <Download size={15} />
+                  Unduh Foto
+                </a>
               </div>
 
-              {/* Dot indicator */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5">
-                {slides.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentSlide(i)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      i === currentSlide ? "bg-white w-4" : "bg-white/50"
-                    }`}
+              {/* Foto utama */}
+              <div className="relative bg-gray-50">
+                <div className="relative h-[340px] sm:h-[420px] lg:h-[430px]">
+                  <img
+                    key={activeSlide.src}
+                    src={activeSlide.src}
+                    alt={activeSlide.alt}
+                    className="absolute inset-0 h-full w-full object-contain p-4"
                   />
-                ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => goToSlide(currentSlide - 1)}
+                  aria-label="Foto sebelumnya"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-gray-700 shadow-md w-10 h-10 rounded-full flex items-center justify-center transition"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToSlide(currentSlide + 1)}
+                  aria-label="Foto berikutnya"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-gray-700 shadow-md w-10 h-10 rounded-full flex items-center justify-center transition"
+                >
+                  <ChevronRight size={20} />
+                </button>
               </div>
 
-              {/* Prev / Next */}
-              <button
-                onClick={() =>
-                  setCurrentSlide(
-                    (prev) => (prev - 1 + slides.length) % slides.length
-                  )
-                }
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center transition"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={() =>
-                  setCurrentSlide((prev) => (prev + 1) % slides.length)
-                }
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center transition"
-              >
-                <ChevronRight size={20} />
-              </button>
+              {/* Navigasi thumbnail */}
+              <div className="border-t border-gray-100 p-3">
+                <div
+                  ref={thumbsRef}
+                  className="relative flex gap-2 overflow-x-auto pb-1"
+                >
+                  {slides.map((slide, i) => (
+                    <button
+                      key={slide.thumb}
+                      type="button"
+                      ref={i === currentSlide ? activeThumbRef : undefined}
+                      onClick={() => goToSlide(i)}
+                      aria-label={`Tampilkan ${slide.alt}`}
+                      aria-current={i === currentSlide}
+                      className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 bg-gray-100 transition ${
+                        i === currentSlide
+                          ? "border-emerald-500 opacity-100"
+                          : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      <img
+                        src={slide.thumb}
+                        alt=""
+                        width={56}
+                        height={56}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-gray-400">
+                  Pilih thumbnail atau gunakan tombol panah ← → untuk melihat foto
+                  lain. Foto dapat diunduh dengan tombol Unduh Foto.
+                </p>
+              </div>
             </div>
 
             {/* Info Card */}
@@ -570,10 +682,10 @@ export default function ProdukPage() {
           </div>
 
           {/* ─── KANAN — Filter + Product List ─── */}
-          <div className="lg:w-[60%]">
+          <div className="lg:w-[58%]">
             {/* Filter Bar */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-4 py-2.5 flex-1">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center">
+              <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-4 py-2.5 flex-1 min-w-[180px]">
                 <Search size={18} className="text-gray-400" />
                 <input
                   type="text"
@@ -646,49 +758,85 @@ export default function ProdukPage() {
                     </span>
                   </h3>
 
-                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full min-w-[660px] table-fixed text-sm">
+                        <colgroup>
+                          <col className="w-[8%]" />
+                          <col className="w-[21%]" />
+                          <col className="w-[27%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[17%]" />
+                          <col className="w-[13%]" />
+                        </colgroup>
                         <thead>
                           <tr className="bg-emerald-50 text-emerald-800">
-                            <th className="py-3 px-4 text-left w-10">No</th>
-                            <th className="py-3 px-4 text-left">Brand</th>
-                            <th className="py-3 px-4 text-left">Nama Produk</th>
-                            <th className="py-3 px-4 text-left">Varian</th>
-                            <th className="py-3 px-4 text-right">Harga</th>
-                            <th className="py-3 px-4 text-left">Keterangan</th>
+                            <th className="py-3 px-3 sm:px-4 text-center text-[11px] font-semibold uppercase tracking-wide">
+                              No
+                            </th>
+                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
+                              Brand
+                            </th>
+                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
+                              Nama Produk
+                            </th>
+                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
+                              Varian
+                            </th>
+                            <th className="py-3 px-3 sm:px-4 text-right text-[11px] font-semibold uppercase tracking-wide">
+                              Harga
+                            </th>
+                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
+                              Keterangan
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {items.map((p, i) => (
                             <tr
                               key={`${cat}-${i}`}
-                              className="border-t border-gray-100 hover:bg-gray-50 transition"
+                              className="border-t border-gray-100 align-middle transition even:bg-gray-50/70 hover:bg-emerald-50/40"
                             >
-                              <td className="py-3 px-4 text-gray-400">
+                              <td className="py-2.5 px-3 sm:px-4 text-center text-xs text-gray-400 tabular-nums">
                                 {i + 1}
                               </td>
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
+                              <td className="py-2.5 px-3 sm:px-4">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <BrandAvatar brand={p.brand} />
-                                  <span className="font-medium">{p.brand}</span>
+                                  <span
+                                    className="truncate font-medium text-gray-800"
+                                    title={p.brand}
+                                  >
+                                    {p.brand}
+                                  </span>
                                 </div>
                               </td>
-                              <td className="py-3 px-4">{p.name}</td>
-                              <td className="py-3 px-4 text-gray-500">
-                                {p.variant}
+                              <td className="py-2.5 px-3 sm:px-4 break-words font-medium text-gray-800">
+                                {p.name}
                               </td>
-                              <td className="py-3 px-4 text-right font-semibold text-emerald-700">
+                              <td className="py-2.5 px-3 sm:px-4 break-words text-gray-500">
+                                {p.variant || "-"}
+                              </td>
+                              <td
+                                className={`py-2.5 px-3 sm:px-4 text-right font-semibold text-emerald-700 ${
+                                  p.price > 0 ? "whitespace-nowrap tabular-nums" : ""
+                                }`}
+                              >
                                 {p.price > 0 ? (
                                   formatRupiah(p.price)
                                 ) : (
-                                  <span className="text-amber-600 font-normal text-xs">
+                                  <span className="text-xs font-medium text-amber-600">
                                     Hubungi Admin
                                   </span>
                                 )}
                               </td>
-                              <td className="py-3 px-4 text-gray-500 text-xs">
-                                {p.keterangan}
+                              <td className="py-2.5 px-3 sm:px-4 text-xs text-gray-500">
+                                <span
+                                  className="block truncate"
+                                  title={p.keterangan}
+                                >
+                                  {p.keterangan || "-"}
+                                </span>
                               </td>
                             </tr>
                           ))}
