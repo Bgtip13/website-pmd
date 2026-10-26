@@ -1,5 +1,26 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Menambah foto galeri & logo brand (tanpa ubah kode)
+
+Daftar foto galeri dan logo brand dibaca otomatis dari folder `public/` saat
+`npm run dev` / `npm run build`. Cukup upload file, lalu build/deploy ulang
+(otomatis jika memakai Vercel).
+
+- **Foto galeri produk** → upload ke `public/gallery/` (`.png`, `.jpg`, `.jpeg`,
+  `.webp`, atau `.avif`). Urutan mengikuti nama file (pakai awalan angka bila
+  ingin mengatur posisi, mis. `05-produk-baru.jpg`). Foto lama
+  `public/product-hero-*.png` tetap tampil lebih dulu. Thumbnail WebP dibuat
+  otomatis di `public/gallery-thumbs/`.
+- **Logo brand** → upload ke `public/logos/`. Nama file harus sama dengan nama
+  brand di spreadsheet tanpa spasi/simbol, mis. `royal-canin.png` untuk brand
+  "Royal Canin", `meo.png` untuk "Me-O", `kitchenflavour.png` (atau
+  `kitchen-flavour.png`) untuk "Kitchen Flavour". Logo langsung muncul di tabel
+  produk tanpa mengubah kode.
+
+Setelah menambah/menghapus file, jalankan `npm run media:sync` bila server dev
+sedang berjalan. Perintah `dev` dan `build` sudah menjalankannya otomatis.
+
+
 ## Getting Started
 
 First, run the development server:

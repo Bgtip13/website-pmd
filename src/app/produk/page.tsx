@@ -2,31 +2,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Package, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchProducts, formatRupiah, Product } from "@/lib/fetchProducts";
+import media from "@/lib/media.generated.json";
 
-/* ─── Slideshow Data ─── */
-const slides = [
-  { src: "/product-hero-1.png", thumb: "/gallery-thumbs/hero-1.webp", alt: "Foto produk 1" },
-  { src: "/product-hero-2.png", thumb: "/gallery-thumbs/hero-2.webp", alt: "Foto produk 2" },
-  { src: "/product-hero-3.png", thumb: "/gallery-thumbs/hero-3.webp", alt: "Foto produk 3" },
-  { src: "/product-hero-4.png", thumb: "/gallery-thumbs/hero-4.webp", alt: "Foto produk 4" },
-  { src: "/product-hero-5.png", thumb: "/gallery-thumbs/hero-5.webp", alt: "Foto produk 5" },
-  { src: "/product-hero-6.png", thumb: "/gallery-thumbs/hero-6.webp", alt: "Foto produk 6" },
-  { src: "/product-hero-7.png", thumb: "/gallery-thumbs/hero-7.webp", alt: "Foto produk 7" },
-  { src: "/product-hero-8.png", thumb: "/gallery-thumbs/hero-8.webp", alt: "Foto produk 8" },
-  { src: "/product-hero-9.png", thumb: "/gallery-thumbs/hero-9.webp", alt: "Foto produk 9" },
-  { src: "/product-hero-10.png", thumb: "/gallery-thumbs/hero-10.webp", alt: "Foto produk 10" },
-  { src: "/product-hero-11.png", thumb: "/gallery-thumbs/hero-11.webp", alt: "Foto produk 11" },
-  { src: "/product-hero-12.png", thumb: "/gallery-thumbs/hero-12.webp", alt: "Foto produk 12" },
-  { src: "/product-hero-13.png", thumb: "/gallery-thumbs/hero-13.webp", alt: "Foto produk 13" },
-  { src: "/product-hero-14.png", thumb: "/gallery-thumbs/hero-14.webp", alt: "Foto produk 14" },
-  { src: "/product-hero-15.png", thumb: "/gallery-thumbs/hero-15.webp", alt: "Foto produk 15" },
-  { src: "/product-hero-16.png", thumb: "/gallery-thumbs/hero-16.webp", alt: "Foto produk 16" },
-  { src: "/product-hero-17.png", thumb: "/gallery-thumbs/hero-17.webp", alt: "Foto produk 17" },
-  { src: "/product-hero-18.png", thumb: "/gallery-thumbs/hero-18.webp", alt: "Foto produk 18" },
-  { src: "/product-hero-19.png", thumb: "/gallery-thumbs/hero-19.webp", alt: "Foto produk 19" },
-];
+/* ─── Galeri foto ───
+ * Daftar foto dan thumbnail dibuat otomatis dari isi folder public/,
+ * lihat scripts/generate-media-manifest.mjs.
+ * Tambah foto baru: upload ke public/gallery/ — tidak perlu ubah kode.
+ */
+const slides = media.slides;
+const autoBrandLogos: Record<string, string> = media.brandLogos;
 
-/* ─── Brand Logo Map ─── */
+/* ─── Brand Logo Map (cadangan untuk nama file yang tidak sama dengan nama brand) ─── */
 const brandLogos: Record<string, string> = {
   "Amigo": "/logos/amigo.png",
   "Animal & Co": "/logos/animal-co.png",
@@ -121,7 +107,19 @@ const brandLogos: Record<string, string> = {
     
 };
 
+/* "Me-O" & "meo.png" → "meo"; "Kitchen Flavour" & "kitchen-flavour.png" → "kitchenflavour" */
+function brandKey(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .toLowerCase();
+}
+
 function getBrandLogo(brand: string): string | null {
+  /* Logo otomatis: cukup upload file ke public/logos/ dengan nama sesuai brand */
+  const auto = autoBrandLogos[brandKey(brand)];
+  if (auto) return auto;
+
   if (brandLogos[brand]) return brandLogos[brand];
   const lower = brand.toLowerCase();
   for (const [key, val] of Object.entries(brandLogos)) {

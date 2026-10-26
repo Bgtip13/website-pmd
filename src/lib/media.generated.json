@@ -1,0 +1,188 @@
+{
+  "slides": [
+    {
+      "src": "/product-hero-1.png",
+      "thumb": "/gallery-thumbs/product-hero-1.webp",
+      "alt": "Foto produk 1"
+    },
+    {
+      "src": "/product-hero-2.png",
+      "thumb": "/gallery-thumbs/product-hero-2.webp",
+      "alt": "Foto produk 2"
+    },
+    {
+      "src": "/product-hero-3.png",
+      "thumb": "/gallery-thumbs/product-hero-3.webp",
+      "alt": "Foto produk 3"
+    },
+    {
+      "src": "/product-hero-4.png",
+      "thumb": "/gallery-thumbs/product-hero-4.webp",
+      "alt": "Foto produk 4"
+    },
+    {
+      "src": "/product-hero-5.png",
+      "thumb": "/gallery-thumbs/product-hero-5.webp",
+      "alt": "Foto produk 5"
+    },
+    {
+      "src": "/product-hero-6.png",
+      "thumb": "/gallery-thumbs/product-hero-6.webp",
+      "alt": "Foto produk 6"
+    },
+    {
+      "src": "/product-hero-7.png",
+      "thumb": "/gallery-thumbs/product-hero-7.webp",
+      "alt": "Foto produk 7"
+    },
+    {
+      "src": "/product-hero-8.png",
+      "thumb": "/gallery-thumbs/product-hero-8.webp",
+      "alt": "Foto produk 8"
+    },
+    {
+      "src": "/product-hero-9.png",
+      "thumb": "/gallery-thumbs/product-hero-9.webp",
+      "alt": "Foto produk 9"
+    },
+    {
+      "src": "/product-hero-10.png",
+      "thumb": "/gallery-thumbs/product-hero-10.webp",
+      "alt": "Foto produk 10"
+    },
+    {
+      "src": "/product-hero-11.png",
+      "thumb": "/gallery-thumbs/product-hero-11.webp",
+      "alt": "Foto produk 11"
+    },
+    {
+      "src": "/product-hero-12.png",
+      "thumb": "/gallery-thumbs/product-hero-12.webp",
+      "alt": "Foto produk 12"
+    },
+    {
+      "src": "/product-hero-13.png",
+      "thumb": "/gallery-thumbs/product-hero-13.webp",
+      "alt": "Foto produk 13"
+    },
+    {
+      "src": "/product-hero-14.png",
+      "thumb": "/gallery-thumbs/product-hero-14.webp",
+      "alt": "Foto produk 14"
+    },
+    {
+      "src": "/product-hero-15.png",
+      "thumb": "/gallery-thumbs/product-hero-15.webp",
+      "alt": "Foto produk 15"
+    },
+    {
+      "src": "/product-hero-16.png",
+      "thumb": "/gallery-thumbs/product-hero-16.webp",
+      "alt": "Foto produk 16"
+    },
+    {
+      "src": "/product-hero-17.png",
+      "thumb": "/gallery-thumbs/product-hero-17.webp",
+      "alt": "Foto produk 17"
+    },
+    {
+      "src": "/product-hero-18.png",
+      "thumb": "/gallery-thumbs/product-hero-18.webp",
+      "alt": "Foto produk 18"
+    },
+    {
+      "src": "/product-hero-19.png",
+      "thumb": "/gallery-thumbs/product-hero-19.webp",
+      "alt": "Foto produk 19"
+    }
+  ],
+  "brandLogos": {
+    "amigo": "/logos/amigo.png",
+    "animalco": "/logos/animal-co.png",
+    "aromatic": "/logos/aromatic.png",
+    "beauty": "/logos/beauty.png",
+    "bio": "/logos/bio.png",
+    "bisgo": "/logos/bisgo.png",
+    "bolt": "/logos/bolt.png",
+    "boltdog": "/logos/boltdog.png",
+    "bosscat": "/logos/bosscat.png",
+    "canibite": "/logos/canibite.png",
+    "captainmeow": "/logos/captainmeow.png",
+    "catchoize": "/logos/cat-choize.png",
+    "catmate": "/logos/catmate.png",
+    "cattiecare": "/logos/cattie-care.png",
+    "chester": "/logos/chester.png",
+    "choco": "/logos/choco.png",
+    "cici": "/logos/cici.png",
+    "cleo": "/logos/cleo.png",
+    "coucou": "/logos/coucou.png",
+    "crystalkitty": "/logos/crystal-kitty.png",
+    "cubnkit": "/logos/cubnkit.png",
+    "cuties": "/logos/cuties.png",
+    "delicia": "/logos/delicia.png",
+    "diamond": "/logos/diamond.png",
+    "dogchoize": "/logos/dog-choize.png",
+    "ecopet": "/logos/ecopet.png",
+    "ecosand": "/logos/ecosand.png",
+    "equilibrio": "/logos/equilibrio.png",
+    "excel": "/logos/excel.png",
+    "felibite": "/logos/felibite.png",
+    "flinnie": "/logos/flinnie.png",
+    "freelac": "/logos/freelac.png",
+    "furlove": "/logos/furlove.png",
+    "gege": "/logos/gege.png",
+    "growppy": "/logos/growppy.png",
+    "growssy": "/logos/growssy.png",
+    "hammeal": "/logos/ham%20meal.png",
+    "hamsfood": "/logos/hamsfood.png",
+    "healthy": "/logos/healthy.png",
+    "hepito": "/logos/hepito.png",
+    "holycuan": "/logos/holycuan.png",
+    "junior": "/logos/junior.png",
+    "kitchenflavour": "/logos/kitchen-flavour.png",
+    "lezato": "/logos/lezato.png",
+    "liebao": "/logos/liebao.png",
+    "lifecat": "/logos/lifecat.png",
+    "lifedog": "/logos/lifedog.png",
+    "lightning": "/logos/lightning.png",
+    "luna": "/logos/luna.png",
+    "malco": "/logos/malco.png",
+    "marble": "/logos/marble.png",
+    "markotop": "/logos/markotop.png",
+    "maxi": "/logos/maxi.png",
+    "maxlife": "/logos/maxlife.png",
+    "meo": "/logos/meo.png",
+    "meong": "/logos/meong.png",
+    "michio": "/logos/michio.png",
+    "misterpuss": "/logos/misterpuss.png",
+    "momo": "/logos/momo.png",
+    "naturalworld": "/logos/naturalworld.png",
+    "nice": "/logos/nice.png",
+    "ocean": "/logos/ocean.png",
+    "omegga": "/logos/omegga.png",
+    "optimaprime": "/logos/optimaprime.png",
+    "oricat": "/logos/oricat.png",
+    "pakankoi": "/logos/pakankoi.png",
+    "petopia": "/logos/petopia.png",
+    "pf": "/logos/pf.png",
+    "profat": "/logos/profat.png",
+    "propet": "/logos/propet.png",
+    "proplan": "/logos/proplan.png",
+    "pussbite": "/logos/pussbite.png",
+    "royalcanin": "/logos/royal-canin.png",
+    "santap": "/logos/santap.png",
+    "supercat": "/logos/supercat.png",
+    "takari": "/logos/Takari.png",
+    "taro": "/logos/taro.png",
+    "top": "/logos/TOP.png",
+    "topgrowth": "/logos/topgrowth.png",
+    "toppet": "/logos/toppet.png",
+    "toto": "/logos/TOTO.png",
+    "unicat": "/logos/unicat.png",
+    "universal": "/logos/universal.png",
+    "vitalrabbit": "/logos/vitalrabbit.png",
+    "vitaplus": "/logos/vitaplus.png",
+    "whiskas": "/logos/whiskas.png",
+    "yummy": "/logos/yummy.png"
+  }
+}
