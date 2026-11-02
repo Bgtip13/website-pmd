@@ -231,54 +231,119 @@ function formatRupiahPlain(price: number): string {
   return "Rp " + price.toLocaleString("id-ID");
 }
 
-/* ─── Logo kop surat ───
+/* ─── Gambar untuk PDF ───
  * jsPDF tidak bisa memakai elemen <img> langsung (ia mencoba XHR sinkron dan
- * gagal), jadi logo diambil sebagai data URL lalu ditempel ke PDF.
+ * gagal), jadi gambar diambil sebagai data URL lalu ditempel ke PDF.
  */
-type PdfLogo = {
+type PdfImage = {
   dataUrl: string;
   format: "PNG" | "JPEG" | "WEBP";
   width: number;
   height: number;
 };
 
-async function loadPdfLogo(): Promise<PdfLogo | null> {
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Gambar gagal dimuat: ${src}`));
+    img.src = src;
+  });
+}
+
+/** Ambil gambar dari /public apa adanya — dipakai untuk logo kop surat. */
+async function fetchPdfImage(src: string): Promise<PdfImage | null> {
   try {
-    const res = await fetch("/logo.png", { cache: "force-cache" });
+    const res = await fetch(src, { cache: "force-cache" });
     if (!res.ok) return null;
 
     const blob = await res.blob();
-    const format: PdfLogo["format"] = blob.type.includes("jpeg")
+    const format: PdfImage["format"] = blob.type.includes("jpeg")
       ? "JPEG"
       : blob.type.includes("webp")
         ? "WEBP"
         : "PNG";
 
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
-    });
+    const dataUrl = await blobToDataUrl(blob);
+    const img = await loadImageElement(dataUrl);
+    const width = img.naturalWidth || img.width;
+    const height = img.naturalHeight || img.height;
+    if (!width || !height) return null;
 
-    const size = await new Promise<{ width: number; height: number }>(
-      (resolve, reject) => {
-        const img = new Image();
-        img.onload = () =>
-          resolve({
-            width: img.naturalWidth || img.width,
-            height: img.naturalHeight || img.height,
-          });
-        img.onerror = () => reject(new Error("Logo gagal dimuat"));
-        img.src = dataUrl;
-      }
-    );
-
-    if (!size.width || !size.height) return null;
-    return { dataUrl, format, ...size };
+    return { dataUrl, format, width, height };
   } catch {
     return null;
   }
+}
+
+/** Logo brand diperkecil dulu (tinggi maks 48 px) supaya PDF tidak membengkak. */
+async function fetchSmallLogo(
+  src: string,
+  targetHeight = 48
+): Promise<PdfImage | null> {
+  try {
+    const res = await fetch(src, { cache: "force-cache" });
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    const original = await loadImageElement(await blobToDataUrl(blob));
+    const srcWidth = original.naturalWidth || original.width;
+    const srcHeight = original.naturalHeight || original.height;
+    if (!srcWidth || !srcHeight) return null;
+
+    const scale = Math.min(1, targetHeight / srcHeight);
+    const width = Math.max(1, Math.round(srcWidth * scale));
+    const height = Math.max(1, Math.round(srcHeight * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return fetchPdfImage(src);
+
+    ctx.drawImage(original, 0, 0, width, height);
+    return {
+      dataUrl: canvas.toDataURL("image/png"),
+      format: "PNG",
+      width,
+      height,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const loadPdfLogo = () => fetchPdfImage("/logo.png");
+
+/** Kumpulkan logo semua brand yang muncul di PDF — sekali per brand. */
+async function loadBrandLogoMap(
+  brands: string[]
+): Promise<Map<string, PdfImage>> {
+  const unique = Array.from(
+    new Set(brands.map((b) => (b || "").trim()).filter(Boolean))
+  );
+
+  const entries = await Promise.all(
+    unique.map(async (brand) => {
+      const src = getBrandLogo(brand);
+      if (!src) return null;
+      const image = await fetchSmallLogo(src);
+      return image ? ([brand, image] as const) : null;
+    })
+  );
+
+  const map = new Map<string, PdfImage>();
+  for (const entry of entries) if (entry) map.set(entry[0], entry[1]);
+  return map;
 }
 
 /* ─── PDF Generator (PDF asli, bukan HTML) ─── */
@@ -362,6 +427,9 @@ async function generatePDF(products: Product[]) {
     39
   );
 
+  /* ── Logo brand untuk baris tabel (diambil sekali per brand) ── */
+  const brandLogoMap = await loadBrandLogoMap(products.map((p) => p.brand));
+
   let cursorY = 46;
 
   /* ── Tabel per kategori ── */
@@ -381,9 +449,12 @@ async function generatePDF(products: Product[]) {
 
     autoTable(doc, {
       startY: cursorY + 2.5,
-      head: [["No", "Brand", "Nama Produk", "Varian", "Harga", "Keterangan"]],
+      head: [
+        ["No", "Logo", "Brand", "Nama Produk", "Varian", "Harga", "Keterangan"],
+      ],
       body: items.map((p, i) => [
         String(i + 1),
+        "",
         p.brand || "-",
         p.name || "-",
         p.variant || "-",
@@ -396,6 +467,7 @@ async function generatePDF(products: Product[]) {
         font: "helvetica",
         fontSize: 7.5,
         cellPadding: 1.6,
+        minCellHeight: 7.5,
         overflow: "linebreak",
         valign: "middle",
         textColor: [40, 40, 40],
@@ -412,16 +484,51 @@ async function generatePDF(products: Product[]) {
       alternateRowStyles: { fillColor: [246, 251, 249] },
       columnStyles: {
         0: { cellWidth: 8, halign: "center" },
-        1: { cellWidth: 26 },
-        2: { cellWidth: 50 },
-        3: { cellWidth: 30 },
-        4: {
+        1: { cellWidth: 14, halign: "center" },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 44 },
+        4: { cellWidth: 28 },
+        5: {
           cellWidth: 26,
           halign: "right",
           fontStyle: "bold",
           textColor: [5, 120, 85],
         },
-        5: { cellWidth: 40 },
+        6: { cellWidth: 40 },
+      },
+      /* Logo brand digambar di dalam sel kolom "Logo" */
+      didDrawCell: (data) => {
+        if (data.section !== "body" || data.column.index !== 1) return;
+
+        const item = items[data.row.index];
+        const image = item ? brandLogoMap.get((item.brand || "").trim()) : null;
+        if (!image) return;
+
+        const padX = 1.2;
+        const padY = 0.8;
+        const ratio = Math.min(
+          (data.cell.width - padX * 2) / image.width,
+          (data.cell.height - padY * 2) / image.height
+        );
+        if (!Number.isFinite(ratio) || ratio <= 0) return;
+
+        const drawWidth = image.width * ratio;
+        const drawHeight = image.height * ratio;
+
+        try {
+          doc.addImage(
+            image.dataUrl,
+            image.format,
+            data.cell.x + (data.cell.width - drawWidth) / 2,
+            data.cell.y + (data.cell.height - drawHeight) / 2,
+            drawWidth,
+            drawHeight,
+            `brand-${item.brand}`,
+            "FAST"
+          );
+        } catch {
+          /* satu logo gagal → baris tetap tampil tanpa logo */
+        }
       },
     });
 
