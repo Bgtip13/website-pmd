@@ -231,6 +231,56 @@ function formatRupiahPlain(price: number): string {
   return "Rp " + price.toLocaleString("id-ID");
 }
 
+/* ─── Logo kop surat ───
+ * jsPDF tidak bisa memakai elemen <img> langsung (ia mencoba XHR sinkron dan
+ * gagal), jadi logo diambil sebagai data URL lalu ditempel ke PDF.
+ */
+type PdfLogo = {
+  dataUrl: string;
+  format: "PNG" | "JPEG" | "WEBP";
+  width: number;
+  height: number;
+};
+
+async function loadPdfLogo(): Promise<PdfLogo | null> {
+  try {
+    const res = await fetch("/logo.png", { cache: "force-cache" });
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    const format: PdfLogo["format"] = blob.type.includes("jpeg")
+      ? "JPEG"
+      : blob.type.includes("webp")
+        ? "WEBP"
+        : "PNG";
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+    const size = await new Promise<{ width: number; height: number }>(
+      (resolve, reject) => {
+        const img = new Image();
+        img.onload = () =>
+          resolve({
+            width: img.naturalWidth || img.width,
+            height: img.naturalHeight || img.height,
+          });
+        img.onerror = () => reject(new Error("Logo gagal dimuat"));
+        img.src = dataUrl;
+      }
+    );
+
+    if (!size.width || !size.height) return null;
+    return { dataUrl, format, ...size };
+  } catch {
+    return null;
+  }
+}
+
 /* ─── PDF Generator (PDF asli, bukan HTML) ─── */
 async function generatePDF(products: Product[]) {
   if (products.length === 0) {
@@ -260,15 +310,28 @@ async function generatePDF(products: Product[]) {
   const categories = sortCategories(Object.keys(grouped));
 
   /* ── Kop surat ── */
-  try {
-    const logo = new Image();
-    logo.src = "/logo.png";
-    await logo.decode();
-    if (logo.width > 0) {
-      doc.addImage(logo, "PNG", marginX, 8, 18, 18);
+  const logo = await loadPdfLogo();
+  if (logo) {
+    try {
+      /* Logo diskalakan proporsional di dalam kotak 18 × 18 mm */
+      const boxSize = 18;
+      const ratio = logo.width / logo.height;
+      const drawWidth = ratio >= 1 ? boxSize : boxSize * ratio;
+      const drawHeight = ratio >= 1 ? boxSize / ratio : boxSize;
+
+      doc.addImage(
+        logo.dataUrl,
+        logo.format,
+        marginX + (boxSize - drawWidth) / 2,
+        8 + (boxSize - drawHeight) / 2,
+        drawWidth,
+        drawHeight,
+        "pmd-logo",
+        "FAST"
+      );
+    } catch {
+      /* logo gagal ditempel → PDF tetap dibuat */
     }
-  } catch {
-    /* logo gagal dimuat → PDF tetap dibuat */
   }
 
   doc.setFont("helvetica", "bold");
