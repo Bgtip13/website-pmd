@@ -29,7 +29,7 @@ const features = [
 /* ─── Schedule ─── */
 const schedule = [
   { area: "Solo Raya", days: "Senin & Kamis", cities: ["Surakarta", "Boyolali", "Klaten", "Sukoharjo", "Sragen", "Karanganyar", "Wonogiri"], sales: "Adelia", phone: "6282342931570", color: "blue" },
-  { area: "DIY & Sekitarnya", days: "Selasa & Jumat", cities: ["Yogyakarta", "Bantul", "Sleman", "Kulon Progo", "Gunung Kidul", "Kebumen", "Purworejo", "Magelang"], sales: "April", phone: "628232352405", color: "emerald" },
+  { area: "DIY & Sekitarnya", days: "Selasa & Jumat", cities: ["Yogyakarta", "Bantul", "Sleman", "Kulon Progo", "Gunung Kidul", "Kebumen", "Purworejo", "Magelang"], sales: "April", phone: "6282323352405", color: "emerald" },
   { area: "Semarang & Sekitarnya", days: "Rabu & Sabtu", cities: ["Semarang Kota", "Semarang Kabupaten", "Demak", "Kudus", "Pati", "Grobogan", "Salatiga"], sales: "Fitri", phone: "6282323209960", color: "violet" },
 ];
 
