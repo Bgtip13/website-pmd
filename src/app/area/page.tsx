@@ -1,9 +1,17 @@
 "use client";
-import { useState } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, ChevronDown, ChevronUp, Truck } from "lucide-react";
+import { m } from "motion/react";
+import { MapPin, Truck, PawPrint } from "lucide-react";
+import { Reveal } from "@/components/motion/Reveal";
+import WaveDivider from "@/components/motion/WaveDivider";
+import { TabSwitcher, TabPanel, useTabs } from "@/components/ui/TabSwitcher";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ease } from "@/lib/motion";
 
-const AreaMap = dynamic(() => import("@/components/AreaMap"), { ssr: false });
+const AreaMap = dynamic(() => import("@/components/AreaMap"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-full w-full rounded-none" />,
+});
 
 const areas = [
   {
@@ -38,85 +46,92 @@ const colorClasses: Record<string, { bg: string; border: string; text: string; b
   violet: { bg: "bg-violet-50", border: "border-violet-500", text: "text-violet-700", badge: "bg-violet-100 text-violet-700" },
 };
 
+const tabItems = areas.map((a, i) => ({ id: String(i), label: a.name.split(" ")[0], icon: <MapPin size={14} /> }));
+const tabIds = tabItems.map((t) => t.id);
+
 export default function AreaPage() {
-  const [expandedArea, setExpandedArea] = useState<number | null>(0);
+  const { value, direction, setValue } = useTabs(tabIds, "0");
+  const idx = Number(value);
+  const area = areas[idx];
+  const c = colorClasses[area.color];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream">
       {/* Header */}
       <section className="relative overflow-hidden bg-emerald-700">
         <div className="absolute inset-0 opacity-15" style={{ backgroundImage: "url('/cat-pattern.png')", backgroundSize: "cover", backgroundPosition: "center" }} />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">Area Layanan</h1>
-          <p className="text-emerald-100 text-lg max-w-2xl">Kami melayani pengiriman pakan kucing ke seluruh area Jawa Tengah dan DIY dengan jadwal rutin dua kali seminggu.</p>
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16">
+          <m.h1 initial={{ opacity: 0, y: 24, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.7, ease }} className="mb-3 text-3xl font-semibold text-white md:text-4xl">
+            Area Layanan
+          </m.h1>
+          <m.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease, delay: 0.15 }} className="max-w-2xl text-lg text-emerald-100">
+            Kami melayani pengiriman pakan hewan ke seluruh area Jawa Tengah dan DIY dengan jadwal rutin dua kali seminggu.
+          </m.p>
         </div>
       </section>
+      <WaveDivider from="bg-emerald-700" to="text-cream" />
 
-      {/* Area Cards + Map */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Kiri — Cards */}
-          <div className="space-y-4">
-            {areas.map((area, idx) => {
-              const c = colorClasses[area.color];
-              const isExpanded = expandedArea === idx;
-              return (
-                <div key={idx} className={`rounded-2xl border-l-4 ${c.border} bg-white shadow-sm overflow-hidden transition-all`}>
-                  <button
-                    onClick={() => setExpandedArea(isExpanded ? null : idx)}
-                    className={`w-full flex items-center justify-between p-5 text-left ${isExpanded ? c.bg : "bg-white"}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl ${c.badge} flex items-center justify-center`}>
-                        <MapPin size={22} />
-                      </div>
-                      <div>
-                        <h3 className={`font-bold text-lg ${c.text}`}>{area.name}</h3>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <Truck size={14} /> {area.days}
-                        </p>
-                      </div>
-                    </div>
-                    {isExpanded ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
-                  </button>
+      {/* Tabs + Detail + Map */}
+      <section className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Kiri — Tab wilayah */}
+          <Reveal>
+            <TabSwitcher tabs={tabItems} value={value} onChange={setValue} layoutId="area-tab-pill" className="mb-5" />
 
-                  {isExpanded && (
-                    <div className="px-5 pb-5 border-t border-gray-100">
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Wilayah Cakupan</p>
-                        <div className="flex flex-wrap gap-2">
-                          {area.cities.map((city, ci) => (
-                            <span key={ci} className={`text-xs px-3 py-1 rounded-full ${c.badge}`}>{city}</span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          Sales: <strong>{area.sales}</strong>
-                        </div>
-                        <a
-                          href={`https://wa.me/${area.phone}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 bg-green-500 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-green-600 transition"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                          </svg>
-                          Chat WhatsApp
-                        </a>
-                      </div>
-                    </div>
-                  )}
+            <TabPanel id={value} direction={direction}>
+              <div className={`overflow-hidden rounded-3xl border-l-4 ${c.border} bg-white shadow-sm`}>
+                <div className={`flex items-center gap-4 p-5 ${c.bg}`}>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${c.badge}`}>
+                    <MapPin size={22} />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-semibold ${c.text}`}>{area.name}</h3>
+                    <p className="flex items-center gap-1 text-sm text-gray-500"><Truck size={14} /> {area.days}</p>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+                <div className="p-5">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Wilayah Cakupan</p>
+                  <m.div
+                    key={value}
+                    initial="hidden"
+                    animate="show"
+                    variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04, delayChildren: 0.15 } } }}
+                    className="flex flex-wrap gap-2"
+                  >
+                    {area.cities.map((city) => (
+                      <m.span
+                        key={city}
+                        variants={{ hidden: { opacity: 0, scale: 0.8, y: 8 }, show: { opacity: 1, scale: 1, y: 0 } }}
+                        whileHover={{ y: -2, scale: 1.05 }}
+                        className={`rounded-full px-3 py-1 text-xs ${c.badge}`}
+                      >
+                        {city}
+                      </m.span>
+                    ))}
+                  </m.div>
+                  <div className="mt-5 flex items-center justify-between">
+                    <div className="text-sm text-gray-600">Sales: <strong>{area.sales}</strong></div>
+                    <m.a
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                      href={`https://wa.me/${area.phone}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-white hover:bg-green-600"
+                    >
+                      <PawPrint className="h-4 w-4 group-hover:animate-paw" />
+                      Chat WhatsApp
+                    </m.a>
+                  </div>
+                </div>
+              </div>
+            </TabPanel>
+          </Reveal>
 
-          {/* Kanan — Map */}
-          <div className="rounded-2xl overflow-hidden shadow-lg bg-white h-[500px] sticky top-24">
-            <AreaMap expandedArea={expandedArea} />
-          </div>
+          {/* Kanan — Peta */}
+          <Reveal delay={0.1} y={32} className="sticky top-24 h-[500px] overflow-hidden rounded-3xl bg-white shadow-xl shadow-emerald-900/5">
+            <AreaMap expandedArea={idx} />
+          </Reveal>
         </div>
       </section>
     </div>

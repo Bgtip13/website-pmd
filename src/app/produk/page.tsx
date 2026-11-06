@@ -1,6 +1,13 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Package, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { m } from "motion/react";
+import { Search, Package, Download } from "lucide-react";
+import ProductGallery from "@/components/ui/ProductGallery";
+import { TabSwitcher, TabPanel, useTabs } from "@/components/ui/TabSwitcher";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import WaveDivider from "@/components/motion/WaveDivider";
+import { Reveal } from "@/components/motion/Reveal";
+import { ease } from "@/lib/motion";
 import { fetchProducts, formatRupiah, Product } from "@/lib/fetchProducts";
 import media from "@/lib/media.generated.json";
 
@@ -580,19 +587,8 @@ export default function ProdukPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [selectedBrand, setSelectedBrand] = useState("Semua");
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
-  const thumbsRef = useRef<HTMLDivElement>(null);
-  const activeThumbRef = useRef<HTMLButtonElement>(null);
-
-  const activeSlide = slides[currentSlide];
-  const activeFileType = activeSlide.src.split(".").pop() ?? "png";
-
-  const goToSlide = (index: number) => {
-    setCurrentSlide((index + slides.length) % slides.length);
-  };
 
   useEffect(() => {
     fetchProducts().then((data) => {
@@ -601,47 +597,16 @@ export default function ProdukPage() {
     });
   }, []);
 
-  /* Navigasi keyboard ← → (tanpa mengganggu input filter) */
-  useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if (event.key === "ArrowLeft") {
-        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-      } else if (event.key === "ArrowRight") {
-        setCurrentSlide((prev) => (prev + 1) % slides.length);
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, []);
-
-  /* Preload foto berikutnya agar navigasi terasa ringan */
-  useEffect(() => {
-    const next = slides[(currentSlide + 1) % slides.length];
-    const img = new Image();
-    img.src = next.src;
-  }, [currentSlide]);
-
-  /* Thumbnail aktif selalu terlihat di strip navigasi */
-  useEffect(() => {
-    const container = thumbsRef.current;
-    const thumb = activeThumbRef.current;
-    if (!container || !thumb) return;
-    container.scrollTo({
-      left:
-        thumb.offsetLeft -
-        container.clientWidth / 2 +
-        thumb.clientWidth / 2,
-      behavior: "smooth",
-    });
-  }, [currentSlide]);
-
   const categories = useMemo(() => {
     const cats = products.map((p) => p.cat).filter((c) => c !== "");
     return ["Semua", ...sortCategories([...new Set(cats)])];
   }, [products]);
+
+  const categoryTabs = useMemo(
+    () => categories.map((c) => ({ id: c, label: c === "Semua" ? "Semua" : c })),
+    [categories]
+  );
+  const { value: selectedCategory, direction, setValue: setSelectedCategory } = useTabs(categories, "Semua");
 
   const brands = useMemo(() => {
     const brs = products.map((p) => p.brand).filter((b) => b !== "");
@@ -700,20 +665,8 @@ export default function ProdukPage() {
     }
   }
 
-  /* ─── Loading State ─── */
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-500">Memuat produk...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream">
       {/* ─── Header Section ─── */}
       <section className="relative overflow-hidden bg-emerald-700">
         <div
@@ -725,109 +678,36 @@ export default function ProdukPage() {
           }}
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+          <m.h1
+            initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.7, ease }}
+            className="text-3xl md:text-4xl font-semibold text-white mb-3"
+          >
             Produk & Price List
-          </h1>
-          <p className="text-emerald-100 text-lg max-w-2xl">
-            Daftar lengkap produk pakan kucing yang tersedia. Harga normal
+          </m.h1>
+          <m.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease, delay: 0.15 }}
+            className="text-emerald-100 text-lg max-w-2xl"
+          >
+            Daftar lengkap produk pakan kucing &amp; anjing yang tersedia. Harga normal
             tercantum — untuk harga grosir, hubungi admin kami.
-          </p>
+          </m.p>
         </div>
       </section>
+      <WaveDivider from="bg-emerald-700" to="text-cream" />
 
       {/* ─── Main Content — Side by Side ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* ─── KIRI — Galeri foto produk (manual, bisa diunduh) ─── */}
           <div className="lg:w-[42%] lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
-            <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-white border border-gray-100">
-              {/* Header galeri + tombol unduh */}
-              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-800">Galeri Produk</p>
-                  <p className="text-xs text-gray-500" aria-live="polite">
-                    Foto {currentSlide + 1} dari {slides.length}
-                  </p>
-                </div>
-                <a
-                  href={activeSlide.src}
-                  download={`Produk-PMD-${currentSlide + 1}.${activeFileType}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-medium text-white transition shrink-0"
-                >
-                  <Download size={15} />
-                  Unduh Foto
-                </a>
-              </div>
-
-              {/* Foto utama */}
-              <div className="relative bg-gray-50">
-                <div className="relative h-[340px] sm:h-[420px] lg:h-[430px]">
-                  <img
-                    key={activeSlide.src}
-                    src={activeSlide.src}
-                    alt={activeSlide.alt}
-                    className="absolute inset-0 h-full w-full object-contain p-4"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => goToSlide(currentSlide - 1)}
-                  aria-label="Foto sebelumnya"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-gray-700 shadow-md w-10 h-10 rounded-full flex items-center justify-center transition"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToSlide(currentSlide + 1)}
-                  aria-label="Foto berikutnya"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-gray-700 shadow-md w-10 h-10 rounded-full flex items-center justify-center transition"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-
-              {/* Navigasi thumbnail */}
-              <div className="border-t border-gray-100 p-3">
-                <div
-                  ref={thumbsRef}
-                  className="relative flex gap-2 overflow-x-auto pb-1"
-                >
-                  {slides.map((slide, i) => (
-                    <button
-                      key={slide.thumb}
-                      type="button"
-                      ref={i === currentSlide ? activeThumbRef : undefined}
-                      onClick={() => goToSlide(i)}
-                      aria-label={`Tampilkan ${slide.alt}`}
-                      aria-current={i === currentSlide}
-                      className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 bg-gray-100 transition ${
-                        i === currentSlide
-                          ? "border-emerald-500 opacity-100"
-                          : "border-transparent opacity-60 hover:opacity-100"
-                      }`}
-                    >
-                      <img
-                        src={slide.thumb}
-                        alt=""
-                        width={56}
-                        height={56}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-[11px] text-gray-400">
-                  Pilih thumbnail atau gunakan tombol panah ← → untuk melihat foto
-                  lain. Foto dapat diunduh dengan tombol Unduh Foto.
-                </p>
-              </div>
-            </div>
+            <ProductGallery slides={slides} />
 
             {/* Info Card */}
-            <div className="mt-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <Reveal className="mt-4 bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <Package size={18} className="text-emerald-600" />
                 Informasi Produk
@@ -846,14 +726,25 @@ export default function ProdukPage() {
                   Stok dan harga dapat berubah sewaktu-waktu
                 </li>
               </ul>
-            </div>
+            </Reveal>
           </div>
 
           {/* ─── KANAN — Filter + Product List ─── */}
           <div className="lg:w-[58%]">
+            {/* Tab kategori */}
+            {!loading && (
+              <TabSwitcher
+                tabs={categoryTabs}
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                layoutId="product-category-pill"
+                className="mb-4"
+              />
+            )}
+
             {/* Filter Bar */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center">
-              <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-4 py-2.5 flex-1 min-w-[180px]">
+            <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center">
+              <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-4 py-2.5 flex-1 min-w-[180px] transition-shadow focus-within:ring-2 focus-within:ring-emerald-400 focus-within:bg-white">
                 <Search size={18} className="text-gray-400" />
                 <input
                   type="text"
@@ -863,18 +754,6 @@ export default function ProdukPage() {
                   className="bg-transparent outline-none text-sm w-full"
                 />
               </div>
-
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer"
-              >
-                {[...new Set(categories)].map((c, i) => (
-                  <option key={`cat-${i}`} value={c}>
-                    {c === "Semua" ? "Semua Kategori" : c}
-                  </option>
-                ))}
-              </select>
 
               <select
                 value={selectedBrand}
@@ -888,25 +767,32 @@ export default function ProdukPage() {
                 ))}
               </select>
 
-              <button
+              <m.button
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleExport}
                 disabled={isExporting}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Download size={16} />
                 {isExporting ? "Menyiapkan..." : "Unduh PDF"}
-              </button>
+              </m.button>
             </div>
 
             {/* Count */}
+            {loading ? (
+              <TableSkeleton rows={8} />
+            ) : (
+            <>
             <p className="text-sm text-gray-500 mb-4">
               Menampilkan {filteredProducts.length} dari {products.length}{" "}
               produk
             </p>
+            <TabPanel id={`${selectedCategory}|${selectedBrand}`} direction={direction}>
 
             {/* Product List by Category */}
             {groupedProducts.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
+              <div className="text-center py-16 bg-white rounded-3xl shadow-sm">
                 <Package size={48} className="text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">
                   Tidak ada produk ditemukan
@@ -961,9 +847,12 @@ export default function ProdukPage() {
                         </thead>
                         <tbody>
                           {items.map((p, i) => (
-                            <tr
+                            <m.tr
                               key={`${cat}-${i}`}
-                              className="border-t border-gray-100 align-middle transition even:bg-gray-50/70 hover:bg-emerald-50/40"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.35, ease, delay: Math.min(i, 12) * 0.025 }}
+                              className="border-t border-gray-100 align-middle transition-colors even:bg-gray-50/70 hover:bg-emerald-50/60"
                             >
                               <td className="py-2.5 px-3 sm:px-4 text-center text-xs text-gray-400 tabular-nums">
                                 {i + 1}
@@ -1000,7 +889,7 @@ export default function ProdukPage() {
                               <td className="py-2.5 px-3 sm:px-4 text-xs text-gray-500 break-words">
                                 {p.keterangan || "-"}
                               </td>
-                            </tr>
+                            </m.tr>
                           ))}
                         </tbody>
                       </table>
@@ -1008,6 +897,9 @@ export default function ProdukPage() {
                   </div>
                 </div>
               ))
+            )}
+            </TabPanel>
+            </>
             )}
           </div>
         </div>

@@ -1,6 +1,53 @@
 @import "tailwindcss";
 
+/* Tailwind v4: token tema didefinisikan di CSS (tailwind.config.ts tidak dibaca otomatis). */
+@theme {
+  --color-cream: #fbf7f0;
+  --color-sand: #f3ebdd;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fredoka), var(--font-nunito), ui-sans-serif, sans-serif;
+
+  --animate-paw: paw-wiggle 0.7s ease-in-out;
+  --animate-float: float-y 5s ease-in-out infinite;
+
+  @keyframes paw-wiggle {
+    0%, 100% { transform: rotate(0) scale(1); }
+    20% { transform: rotate(-18deg) scale(1.25); }
+    45% { transform: rotate(14deg) scale(1.2); }
+    70% { transform: rotate(-8deg) scale(1.1); }
+  }
+  @keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem; /* tinggi navbar, agar anchor tidak tertutup */
+}
+
 body {
-  background-color: #ffffff;
-  color: #111827;
+  background-color: var(--color-cream);
+  color: #1f2937;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--font-display); }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(100deg, #eceae4 30%, #f8f6f1 50%, #eceae4 70%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .skeleton { animation: none; }
 }
