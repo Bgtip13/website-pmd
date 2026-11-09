@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { m } from "motion/react";
+import type { RowInput } from "jspdf-autotable";
 import { Search, Package, Download } from "lucide-react";
 import ProductGallery from "@/components/ui/ProductGallery";
 import { TabSwitcher, TabPanel, useTabs } from "@/components/ui/TabSwitcher";
@@ -238,6 +239,62 @@ function formatRupiahPlain(price: number): string {
   return "Rp " + price.toLocaleString("id-ID");
 }
 
+/* Kelompokkan produk per brand (urutan sesuai kemunculan di spreadsheet).
+ * Nomor urut berlanjut sepanjang kategori, bukan diulang di tiap brand. */
+function groupByBrand(items: Product[]) {
+  const order: string[] = [];
+  const map = new Map<string, Product[]>();
+  for (const p of items) {
+    const brand = (p.brand || "").trim() || "Lainnya";
+    if (!map.has(brand)) {
+      map.set(brand, []);
+      order.push(brand);
+    }
+    map.get(brand)!.push(p);
+  }
+  let no = 0;
+  return order.map((brand) => ({
+    brand,
+    items: map.get(brand)!.map((p) => ({ p, no: ++no })),
+  }));
+}
+
+/* ─── Chip rasa: tampil 4 pertama, sisanya dilipat jadi "+N rasa" ─── */
+const MAX_FLAVOR_CHIPS = 4;
+
+function FlavorChips({ flavors }: { flavors: string[] }) {
+  const [open, setOpen] = useState(false);
+  if (flavors.length === 0) return null;
+
+  const visible = open ? flavors : flavors.slice(0, MAX_FLAVOR_CHIPS);
+  const hidden = flavors.length - MAX_FLAVOR_CHIPS;
+
+  return (
+    <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Pilihan rasa">
+      {visible.map((flavor) => (
+        <li
+          key={flavor}
+          className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] leading-4 text-gray-600"
+        >
+          {flavor}
+        </li>
+      ))}
+      {hidden > 0 && (
+        <li>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="rounded-full border border-emerald-200 px-2 py-0.5 text-[11px] font-medium leading-4 text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500"
+          >
+            {open ? "Ringkas" : `+${hidden} rasa`}
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
 /* ─── Gambar untuk PDF ───
  * jsPDF tidak bisa memakai elemen <img> langsung (ia mencoba XHR sinkron dan
  * gagal), jadi gambar diambil sebagai data URL lalu ditempel ke PDF.
@@ -439,14 +496,78 @@ async function generatePDF(products: Product[]) {
 
   let cursorY = 46;
 
-  /* ── Tabel per kategori ── */
+  /* ── Tabel per kategori ──
+   * Brand jadi baris judul (logo + nama) sekali saja, lalu produk di bawahnya.
+   * Rasa ditulis kecil di bawah nama produk, jadi kolom Varian yang dulu
+   * sempit tidak diperlukan lagi dan tidak ada teks yang bertumpuk. */
+  const COL = { no: 8, name: 98, size: 22, note: 34, price: 28 };
+  const PAD = 1.6; // padding sel (mm)
+  const ROW_MIN = 7.5;
+  const BRAND_ROW_H = 8.5;
+  const HEAD_H = 7.5;
+  const NAME_PT = 7.8;
+  const FLAVOR_PT = 6.6;
+  const LINE = 0.3528 * 1.15; // mm per pt, termasuk jarak antarbaris
+  const tableTop = 18;
+  const pageLimit = pageHeight - bottomSafe;
+
+  type PdfRow =
+    | { kind: "brand"; brand: string }
+    | {
+        kind: "item";
+        product: Product;
+        no: number;
+        nameLines: string[];
+        flavorLines: string[];
+        height: number;
+      };
+
+  const textWidth = COL.name - PAD * 2;
+
+  type PdfItemRow = Extract<PdfRow, { kind: "item" }>;
+
+  const measureItem = (p: Product, no: number): PdfItemRow => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(NAME_PT);
+    const nameLines: string[] = doc
+      .splitTextToSize(p.name || "-", textWidth)
+      .slice(0, 2);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(FLAVOR_PT);
+    const flavorLines: string[] = p.flavors.length
+      ? doc.splitTextToSize(p.flavors.join(", "), textWidth)
+      : [];
+
+    const content =
+      nameLines.length * NAME_PT * LINE +
+      (flavorLines.length ? 0.5 + flavorLines.length * FLAVOR_PT * LINE : 0);
+    return {
+      kind: "item",
+      product: p,
+      no,
+      nameLines,
+      flavorLines,
+      height: Math.max(ROW_MIN, content + PAD * 2),
+    };
+  };
+
   categories.forEach((cat) => {
     const items = grouped[cat];
 
-    // Halaman baru kalau sisa ruang tidak cukup untuk judul + beberapa baris
-    if (cursorY > pageHeight - bottomSafe - 20) {
+    /* Ukur semua baris dulu. Judul kategori hanya digambar kalau di halaman
+     * itu masih muat: judul + judul kolom + brand pertama + produk pertamanya.
+     * SAFETY menutup selisih kecil antara perkiraan dan hasil autoTable. */
+    const SAFETY = 6;
+    const groups = groupByBrand(items).map((g) => ({
+      brand: g.brand,
+      rows: g.items.map(({ p, no }) => measureItem(p, no)),
+    }));
+
+    const firstNeed = 6 + 2.5 + HEAD_H + BRAND_ROW_H + groups[0].rows[0].height;
+    if (cursorY + firstNeed + SAFETY > pageLimit) {
       doc.addPage();
-      cursorY = 18;
+      cursorY = tableTop;
     }
 
     doc.setFont("helvetica", "bold");
@@ -454,95 +575,192 @@ async function generatePDF(products: Product[]) {
     doc.setTextColor(5, 120, 85);
     doc.text(`${cat} (${items.length} produk)`, marginX, cursorY);
 
-    autoTable(doc, {
-      startY: cursorY + 2.5,
-      head: [
-        ["No", "Logo", "Brand", "Nama Produk", "Varian", "Harga", "Keterangan"],
-      ],
-      body: items.map((p, i) => [
-        String(i + 1),
-        "",
-        p.brand || "-",
-        p.name || "-",
-        p.variant || "-",
-        p.price > 0 ? formatRupiahPlain(p.price) : "Hubungi Admin",
-        p.keterangan || "-",
-      ]),
-      theme: "grid",
-      margin: { top: 18, right: marginX, bottom: bottomSafe, left: marginX },
-      styles: {
-        font: "helvetica",
-        fontSize: 7.5,
-        cellPadding: 1.6,
-        minCellHeight: 7.5,
-        overflow: "linebreak",
-        valign: "middle",
-        textColor: [40, 40, 40],
-        lineColor: [225, 232, 229],
-        lineWidth: 0.15,
-      },
-      headStyles: {
-        fillColor: [5, 150, 105],
-        textColor: 255,
-        fontStyle: "bold",
-        fontSize: 7.5,
-        halign: "left",
-      },
-      alternateRowStyles: { fillColor: [246, 251, 249] },
-      columnStyles: {
-        0: { cellWidth: 8, halign: "center" },
-        1: { cellWidth: 14, halign: "center" },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 44 },
-        4: { cellWidth: 28 },
-        5: {
-          cellWidth: 26,
-          halign: "right",
-          fontStyle: "bold",
-          textColor: [5, 120, 85],
-        },
-        6: { cellWidth: 40 },
-      },
-      /* Logo brand digambar di dalam sel kolom "Logo" */
-      didDrawCell: (data) => {
-        if (data.section !== "body" || data.column.index !== 1) return;
+    /* Susun baris + perkirakan posisi vertikal supaya judul brand tidak
+     * tertinggal sendirian di dasar halaman: kalau brand beserta satu
+     * produk pertamanya tidak muat, tabel dilanjutkan di halaman baru. */
+    const segments: PdfRow[][] = [[]];
+    let simY = cursorY + 2.5 + HEAD_H;
 
-        const item = items[data.row.index];
-        const image = item ? brandLogoMap.get((item.brand || "").trim()) : null;
-        if (!image) return;
+    for (const group of groups) {
+      const firstHeight = group.rows[0].height;
 
-        const padX = 1.2;
-        const padY = 0.8;
-        const ratio = Math.min(
-          (data.cell.width - padX * 2) / image.width,
-          (data.cell.height - padY * 2) / image.height
-        );
-        if (!Number.isFinite(ratio) || ratio <= 0) return;
+      if (simY + BRAND_ROW_H + firstHeight + SAFETY > pageLimit) {
+        if (segments[segments.length - 1].length > 0) segments.push([]);
+        simY = tableTop + HEAD_H;
+      }
 
-        const drawWidth = image.width * ratio;
-        const drawHeight = image.height * ratio;
+      const current = segments[segments.length - 1];
+      current.push({ kind: "brand", brand: group.brand });
+      simY += BRAND_ROW_H;
 
-        try {
-          doc.addImage(
-            image.dataUrl,
-            image.format,
-            data.cell.x + (data.cell.width - drawWidth) / 2,
-            data.cell.y + (data.cell.height - drawHeight) / 2,
-            drawWidth,
-            drawHeight,
-            `brand-${item.brand}`,
-            "FAST"
-          );
-        } catch {
-          /* satu logo gagal → baris tetap tampil tanpa logo */
+      for (const row of group.rows) {
+        if (simY + row.height > pageLimit) simY = tableTop + HEAD_H; // autoTable pindah halaman
+        current.push(row);
+        simY += row.height;
+      }
+    }
+
+    segments.forEach((rows, segIndex) => {
+      if (rows.length === 0) return;
+
+      let startY = cursorY + 2.5;
+      if (segIndex > 0) {
+        doc.addPage();
+        startY = tableTop;
+      }
+
+      const body: RowInput[] = rows.map((row) => {
+        if (row.kind === "brand") {
+          return [
+            {
+              content: row.brand,
+              colSpan: 5,
+              styles: {
+                fillColor: [232, 245, 240],
+                textColor: [4, 95, 70],
+                fontStyle: "bold",
+                fontSize: 8.5,
+                halign: "left",
+                minCellHeight: BRAND_ROW_H,
+                /* ruang di kiri hanya disisakan kalau brand punya logo */
+                cellPadding: {
+                  top: PAD,
+                  bottom: PAD,
+                  left: brandLogoMap.has(row.brand) ? 12 : 3,
+                  right: 2,
+                },
+              },
+            },
+          ];
         }
-      },
-    });
+        const p = row.product;
+        const tall = { minCellHeight: row.height };
+        return [
+          { content: String(row.no), styles: tall },
+          { content: "", styles: tall }, // nama + rasa digambar manual di bawah
+          { content: p.size || "-", styles: tall },
+          { content: p.pack, styles: tall },
+          {
+            content: p.price > 0 ? formatRupiahPlain(p.price) : "Hubungi Admin",
+            styles: tall,
+          },
+        ];
+      });
 
-    const lastTable = (
-      doc as unknown as { lastAutoTable?: { finalY?: number } }
-    ).lastAutoTable;
-    cursorY = (lastTable?.finalY ?? cursorY) + 9;
+      autoTable(doc, {
+        startY,
+        head: [["No", "Produk", "Ukuran", "Keterangan", "Harga"]],
+        body,
+        theme: "grid",
+        rowPageBreak: "avoid",
+        margin: { top: tableTop, right: marginX, bottom: bottomSafe, left: marginX },
+        styles: {
+          font: "helvetica",
+          fontSize: 7.5,
+          cellPadding: PAD,
+          minCellHeight: ROW_MIN,
+          overflow: "linebreak",
+          valign: "middle",
+          textColor: [40, 40, 40],
+          lineColor: [225, 232, 229],
+          lineWidth: 0.15,
+        },
+        headStyles: {
+          fillColor: [5, 150, 105],
+          textColor: 255,
+          fontStyle: "bold",
+          fontSize: 7.5,
+          halign: "left",
+          minCellHeight: HEAD_H,
+        },
+        columnStyles: {
+          0: { cellWidth: COL.no, halign: "center", textColor: [150, 150, 150] },
+          1: { cellWidth: COL.name },
+          2: { cellWidth: COL.size, fontStyle: "bold" },
+          3: { cellWidth: COL.note, fontSize: 7, textColor: [90, 90, 90] },
+          4: {
+            cellWidth: COL.price,
+            halign: "right",
+            fontStyle: "bold",
+            textColor: [5, 120, 85],
+          },
+        },
+        didParseCell: (data) => {
+          if (data.section === "head" && data.column.index === 4) {
+            data.cell.styles.halign = "right";
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section !== "body") return;
+          const row = rows[data.row.index];
+          if (!row) return;
+
+          /* Baris judul brand → logo kecil di kiri */
+          if (row.kind === "brand") {
+            const image = brandLogoMap.get(row.brand);
+            if (!image) return;
+
+            const boxW = 8;
+            const boxH = BRAND_ROW_H - 2;
+            const ratio = Math.min(boxW / image.width, boxH / image.height);
+            if (!Number.isFinite(ratio) || ratio <= 0) return;
+
+            const w = image.width * ratio;
+            const h = image.height * ratio;
+            try {
+              doc.addImage(
+                image.dataUrl,
+                image.format,
+                data.cell.x + 2 + (boxW - w) / 2,
+                data.cell.y + (data.cell.height - h) / 2,
+                w,
+                h,
+                `brand-${row.brand}`,
+                "FAST"
+              );
+            } catch {
+              /* satu logo gagal → judul brand tetap tampil tanpa logo */
+            }
+            return;
+          }
+
+          /* Kolom Produk → nama tebal + rasa abu-abu kecil di bawahnya */
+          if (data.column.index !== 1) return;
+
+          const content =
+            row.nameLines.length * NAME_PT * LINE +
+            (row.flavorLines.length
+              ? 0.5 + row.flavorLines.length * FLAVOR_PT * LINE
+              : 0);
+          const x = data.cell.x + PAD;
+          let y = data.cell.y + (data.cell.height - content) / 2;
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(NAME_PT);
+          doc.setTextColor(30, 30, 30);
+          for (const line of row.nameLines) {
+            doc.text(line, x, y, { baseline: "top" });
+            y += NAME_PT * LINE;
+          }
+
+          if (row.flavorLines.length) {
+            y += 0.5;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(FLAVOR_PT);
+            doc.setTextColor(115, 115, 115);
+            for (const line of row.flavorLines) {
+              doc.text(line, x, y, { baseline: "top" });
+              y += FLAVOR_PT * LINE;
+            }
+          }
+        },
+      });
+
+      const lastTable = (
+        doc as unknown as { lastAutoTable?: { finalY?: number } }
+      ).lastAutoTable;
+      cursorY = (lastTable?.finalY ?? startY) + 9;
+    });
   });
 
   /* ── Footer + nomor halaman di semua halaman ── */
@@ -812,88 +1030,96 @@ export default function ProdukPage() {
                     </span>
                   </h3>
 
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[660px] table-fixed text-sm">
-                        <colgroup>
-                          <col className="w-[6%]" />
-                          <col className="w-[26%]" />
-                          <col className="w-[24%]" />
-                          <col className="w-[14%]" />
-                          <col className="w-[16%]" />
-                          <col className="w-[14%]" />
-                        </colgroup>
-                        <thead>
-                          <tr className="bg-emerald-50 text-emerald-800">
-                            <th className="py-3 px-3 sm:px-4 text-center text-[11px] font-semibold uppercase tracking-wide">
-                              No
-                            </th>
-                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
-                              Brand
-                            </th>
-                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
-                              Nama Produk
-                            </th>
-                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
-                              Varian
-                            </th>
-                            <th className="py-3 px-3 sm:px-4 text-right text-[11px] font-semibold uppercase tracking-wide">
-                              Harga
-                            </th>
-                            <th className="py-3 px-3 sm:px-4 text-left text-[11px] font-semibold uppercase tracking-wide">
-                              Keterangan
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((p, i) => (
-                            <m.tr
-                              key={`${cat}-${i}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.35, ease, delay: Math.min(i, 12) * 0.025 }}
-                              className="border-t border-gray-100 align-middle transition-colors even:bg-gray-50/70 hover:bg-emerald-50/60"
-                            >
-                              <td className="py-2.5 px-3 sm:px-4 text-center text-xs text-gray-400 tabular-nums">
-                                {i + 1}
-                              </td>
-                              <td className="py-2.5 px-3 sm:px-4">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <BrandAvatar brand={p.brand} />
-                                  <span className="break-words font-medium text-gray-800">
-                                    {p.brand}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 sm:px-4 break-words font-medium text-gray-800">
-                                {p.name}
-                              </td>
-                              <td className="py-2.5 px-3 sm:px-4 break-words text-gray-500">
-                                {p.variant || "-"}
-                              </td>
-                              <td
-                                className={`py-2.5 px-3 sm:px-4 text-right font-semibold text-emerald-700 ${
-                                  p.price > 0
-                                    ? "whitespace-nowrap tabular-nums text-[13px]"
-                                    : ""
-                                }`}
-                              >
-                                {p.price > 0 ? (
-                                  formatRupiah(p.price)
-                                ) : (
-                                  <span className="text-xs font-medium text-amber-600">
-                                    Hubungi Admin
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2.5 px-3 sm:px-4 text-xs text-gray-500 break-words">
-                                {p.keterangan || "-"}
-                              </td>
-                            </m.tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  <div
+                    role="table"
+                    aria-label={cat}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                  >
+                    {/* Judul kolom — disembunyikan di HP, tiap baris jadi kartu */}
+                    <div
+                      role="row"
+                      className="hidden sm:grid grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_8.5rem] items-center gap-x-3 bg-emerald-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-emerald-800"
+                    >
+                      <div role="columnheader" className="text-center">No</div>
+                      <div role="columnheader">Produk</div>
+                      <div role="columnheader">Ukuran</div>
+                      <div role="columnheader" className="text-right">Harga</div>
                     </div>
+
+                    {groupByBrand(items).map(({ brand, items: brandItems }) => (
+                      <div role="rowgroup" key={`${cat}-${brand}`}>
+                        {/* Brand tampil sekali sebagai judul grup */}
+                        <div
+                          role="row"
+                          className="flex items-center gap-2.5 border-t border-gray-100 bg-emerald-50/60 px-3 sm:px-4 py-2"
+                        >
+                          <BrandAvatar brand={brand} />
+                          <span role="rowheader" className="font-semibold text-gray-800">
+                            {brand}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {brandItems.length} produk
+                          </span>
+                        </div>
+
+                        {brandItems.map(({ p, no }, i) => (
+                          <m.div
+                            role="row"
+                            key={`${cat}-${brand}-${no}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.35, ease, delay: Math.min(i, 12) * 0.025 }}
+                            className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_8.5rem] items-center gap-x-3 border-t border-gray-100 px-3 sm:px-4 py-2.5 transition-colors hover:bg-emerald-50/60"
+                          >
+                            <div
+                              role="cell"
+                              className="hidden sm:block text-center text-xs text-gray-400 tabular-nums"
+                            >
+                              {no}
+                            </div>
+
+                            <div role="cell" className="min-w-0">
+                              <p className="break-words font-medium text-gray-800">
+                                {p.name}
+                              </p>
+                              <FlavorChips flavors={p.flavors} />
+                            </div>
+
+                            {/* Ukuran + isi per dus. Di HP pindah ke baris kedua. */}
+                            <div
+                              role="cell"
+                              className="col-start-1 row-start-2 mt-1.5 flex flex-wrap items-center gap-1.5 sm:col-auto sm:row-auto sm:mt-0 sm:flex-col sm:items-start sm:gap-1"
+                            >
+                              <span className="inline-flex rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                                {p.size || "-"}
+                              </span>
+                              {p.pack && (
+                                <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+                                  {p.pack}
+                                </span>
+                              )}
+                            </div>
+
+                            <div
+                              role="cell"
+                              className={`col-start-2 row-start-1 text-right font-semibold text-emerald-700 sm:col-auto sm:row-auto ${
+                                p.price > 0
+                                  ? "whitespace-nowrap tabular-nums text-[13px]"
+                                  : ""
+                              }`}
+                            >
+                              {p.price > 0 ? (
+                                formatRupiah(p.price)
+                              ) : (
+                                <span className="text-xs font-medium text-amber-600">
+                                  Hubungi Admin
+                                </span>
+                              )}
+                            </div>
+                          </m.div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))
