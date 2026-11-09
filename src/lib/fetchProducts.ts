@@ -1,3 +1,5 @@
+import { normalizePack, parseVariant } from "./parseVariant";
+
 export interface Product {
   cat: string;
   brand: string;
@@ -5,6 +7,12 @@ export interface Product {
   variant: string;
   price: number;
   keterangan: string;
+  /** Ukuran kemasan hasil pecahan kolom variant, mis. "20kg" */
+  size: string;
+  /** Daftar rasa hasil pecahan kolom variant, mis. ["Tuna", "Salmon"] */
+  flavors: string[];
+  /** Info isi per dus yang sudah diseragamkan, mis. "Isi 6 pcs" */
+  pack: string;
 }
 
 const GOOGLE_SHEETS_CSV_URL =
@@ -80,13 +88,19 @@ export async function fetchProducts(): Promise<Product[]> {
       const name = (cols[nameIdx] || "").trim();
       if (!name) continue;
 
+      const variant = (cols[variantIdx] || "").trim();
+      const { size, flavors } = parseVariant(variant);
+
       products.push({
         cat: (cols[catIdx] || "").trim(),
         brand: (cols[brandIdx] || "").trim(),
         name: name,
-        variant: (cols[variantIdx] || "").trim(),
+        variant,
         price: priceNum,
-        keterangan: keterangan,
+        keterangan,
+        size,
+        flavors,
+        pack: normalizePack(keterangan),
       });
     }
 
